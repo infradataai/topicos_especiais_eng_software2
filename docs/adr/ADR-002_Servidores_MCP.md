@@ -1,28 +1,28 @@
 **REGISTRO DE DECISÃO ARQUITETURAL**
 
-**ADR-054 — Servidores MCP e fronteiras de acesso (consulta em leitura à camada ouro e leitura da pasta LAI)**
+**ADR-002 — Servidores MCP e fronteiras de acesso (consulta em leitura à camada ouro e leitura da pasta LAI)**
 
 | Campo | Conteúdo |
 |---|---|
-| Identificador | ADR-054 |
+| Identificador | ADR-002 |
 | Título | Servidores MCP e fronteiras de acesso (consulta em leitura à camada ouro e leitura da pasta LAI) |
-| Status | ACEITO (documentar); homologação do orientador pendente |
+| Status | ACEITO |
 | Data | 2026-08-24 |
-| Decisor | Flávio Eduardo Batista Moreira (doutorando); Prof. Elias Jacob de Menezes Neto (homologação pendente) |
-| Projeto | Modelagem espaço-temporal multifatorial de sinistros rodoviários com integração de pavimento estrutural e risco ajustado por exposição, PPgTI/UFRN-IMD |
-| Relaciona-se com | A montante, o ADR-053 (ambiente de IA). A jusante, o agente de qualidade de dados e o agente de acompanhamento da LAI, previstos no módulo de automação. |
+| Decisor | Flávio Eduardo Batista Moreira (doutorando) |
+| Projeto | Ambiente da disciplina Tópicos Avançados em Engenharia de Software 2 (sandbox Tese_BR_TEES); estudo de caso: pipeline M-LRSDI da tese, PPgTI/UFRN-IMD |
+| Relaciona-se com | A montante, o ADR-001 (ambiente de IA). A jusante, o agente de qualidade de dados e o agente de acompanhamento da LAI, previstos no módulo de automação. |
 | Substitui / é substituído por | Nada registrado |
 
-*Documento elaborado conforme a prática de Architecture Decision Records (RICHARDS; FORD, 2025), no âmbito do protocolo reprodutível da tese (CRISP-DM, fase Data Preparation).*
+*Documento elaborado conforme a prática de Architecture Decision Records (RICHARDS; FORD, 2025). Numeração própria da sandbox da disciplina, independente da numeração da tese.*
 
 # 1. Contexto
 
-O ambiente de IA adotado no ADR-053 permite conectar o agente a ferramentas externas
+O ambiente de IA adotado no ADR-001 permite conectar o agente a ferramentas externas
 pelo Model Context Protocol. Duas necessidades do projeto se beneficiam disso: consultar
 a camada ouro durante a EDA, hoje feita abrindo o banco à mão, e acompanhar os oito
 pedidos da LAI, hoje rastreados em um arquivo de controle. Cada servidor conectado, no
-entanto, amplia a superfície de risco e consome contexto com definições de ferramenta,
-o que exige um critério de parcimônia.
+entanto, amplia a superfície de risco e consome contexto com definições de ferramenta, o
+que exige um critério de parcimônia.
 
 # 2. Decisão
 
@@ -35,11 +35,11 @@ exigem aprovação na primeira sessão por virem do `.mcp.json`.
 # 3. Justificativas
 
 A conexão da camada ouro em leitura habilita consulta em linguagem natural sem risco de
-escrita acidental no banco, o que preserva o determinismo do ADR-026. O acesso de leitura
-à pasta `LAI` prepara o agente de acompanhamento sem conceder escrita. Manter apenas dois
-servidores segue o critério de conectar somente o necessário, reduzindo superfície de
-ataque e gasto de contexto. O uso de variáveis de ambiente evita expor caminhos e
-segredos no arquivo versionado.
+escrita acidental no banco, o que preserva o determinismo do ADR-026 (tese). O acesso de
+leitura à pasta `LAI` prepara o agente de acompanhamento sem conceder escrita. Manter
+apenas dois servidores segue o critério de conectar somente o necessário, reduzindo
+superfície de ataque e gasto de contexto. O uso de variáveis de ambiente evita expor
+caminhos e segredos no arquivo versionado.
 
 # 4. Alternativas consideradas e rejeitadas
 
@@ -69,5 +69,5 @@ correspondente sem afetar dados nem código.
 
 # 8. Relacionados
 
-ADR-053 (ambiente de IA), ADR-010 (bronze imutável), ADR-026 (determinismo) e ADR-041
-(custo social, consumidor a jusante dos dados da LAI).
+ADR-001 (ambiente de IA). Na tese: ADR-010 (bronze imutável), ADR-026 (determinismo) e
+ADR-041 (custo social, consumidor a jusante dos dados da LAI).
