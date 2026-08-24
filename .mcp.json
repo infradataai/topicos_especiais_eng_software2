@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sqlite-ouro": {
+      "command": "npx",
+      "args": ["-y", "mcp-server-sqlite-npx", "${TESE_DB:-../../../VSCODE/Tese_BR/rebuild/tese_brV02.db}"]
+    },
+    "fs-lai": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${LAI_DIR}"]
+    }
+  }
+}

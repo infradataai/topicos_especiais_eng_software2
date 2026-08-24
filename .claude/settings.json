@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(git log:*)",
+      "Bash(python varredura_dnit.py)",
+      "Bash(python varredura_antt.py)",
+      "Bash(pytest:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(python baixa_abertos_BR.py)",
+      "Bash(python coletor_relatorios_antt.py)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
