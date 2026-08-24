@@ -1,0 +1,18 @@
+# Normaliza fim de linha: guarda com LF no repo, converte ao checkout
+* text=auto
+
+# Binarios: sem conversao de fim de linha nem diff de texto
+*.pdf   binary
+*.docx  binary
+*.xlsx  binary
+*.xls   binary
+*.db    binary
+*.sqlite binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+
+# Scripts mantem o fim de linha do seu ambiente
+*.ps1   text eol=crlf
+*.sh    text eol=lf
