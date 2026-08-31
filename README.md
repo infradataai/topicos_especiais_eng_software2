@@ -8,10 +8,22 @@ pipeline **M-LRSDI** de modelagem de sinistros rodoviários.
 ## O que há aqui
 
 - `AGENTS.md` e `CLAUDE.md`: contexto de projeto lido pelos agentes de IA.
-- `.mcp.json`: servidores MCP (`sqlite-ouro` em leitura, `fs-lai` em leitura).
+- `.claude/rules/`: regra por escopo (convenção específica para notebooks).
 - `.claude/settings.json`: permissões do agente (deny, ask, allow).
-- `.gitignore`: proteção de dados e segredos.
+- `.mcp.json`: servidores MCP (`sqlite-ouro` em leitura, `fs-lai` em leitura).
+- `.gitignore` e `.gitattributes`: proteção de dados e segredos, fim de linha.
+- `src/`: código do projeto (ex.: `parse_datas.py`, parsing determinístico de data).
+- `tests/`: testes em pytest.
 - `docs/adr/`: ADRs do trabalho, em espelho markdown versionável.
+- `docs/prompts-comparacao.md`: comparativo de prompt fraco x eficaz (Etapa 4).
+- `Atividades/`: relatórios das atividades assíncronas em PDF.
+
+## Comandos
+
+```bash
+pip install pandas pytest
+pytest -q          # roda os testes
+```
 
 ## O que NÃO há aqui
 
