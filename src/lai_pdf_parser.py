@@ -37,7 +37,7 @@ def normalizar_linhas(linhas: list[list[str]]) -> list[dict]:
     for ln in linhas[1:]:
         valores = [(c or "").strip() for c in ln]
         valores = (valores + [""] * len(cabecalho))[: len(cabecalho)]
-        registros.append(dict(zip(cabecalho, valores)))
+        registros.append(dict(zip(cabecalho, valores, strict=True)))
     return registros
 
 
