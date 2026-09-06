@@ -69,3 +69,8 @@ def validar_tabela(
         and rel.get("datas_fora_da_faixa", 0) == 0
     )
     return rel
+
+
+def contar_linhas(con: sqlite3.Connection, tabela: str) -> int:
+    """Conta as linhas de uma tabela (tarefa pequena da Etapa 1 do harness)."""
+    return con.execute(f'SELECT COUNT(*) FROM "{tabela}"').fetchone()[0]
