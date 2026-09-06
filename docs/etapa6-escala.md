@@ -35,3 +35,16 @@ git worktree add ../TEES-agente-lai       feature/agente-lai
 Conflitos previstos para este projeto, e como tratá-los. O arquivo compartilhado mais quente é o `src/analise.py`, que os dois agentes poderiam tocar; a mitigação é decompor por domínio, um agente por módulo, e fazer merges sequenciais verificados. O banco SQLite é o segundo ponto de conflito: dois agentes escrevendo no mesmo arquivo `.db` corrompem o dado; a mitigação é dar a cada worktree um caminho próprio de banco pela variável de ambiente `TESE_DB`, que o `.mcp.json` já usa. Portas não são um problema no estágio atual, porque ainda não há servidor web; quando o mapa interativo do piloto RN entrar, cada worktree precisará de uma porta distinta. As dependências são compartilhadas pelo mesmo ambiente Python, o que é seguro para leitura, mas recomenda um ambiente virtual por worktree se as versões divergirem.
 
 O aprendizado central bate com a aula: o isolamento (worktree) resolve o conflito de arquivos, mas a coordenação (decomposição por domínio, lista de tarefas compartilhada, merge sequencial) é o que evita retrabalho e corrupção de dado quando dois agentes, ou duas pessoas, trabalham ao mesmo tempo.
+
+### Evidência real da execução (opção C)
+
+Os dois worktrees foram de fato criados e listados:
+
+```text
+git worktree list
+.../Tese_BR_TEES          4c30176 [feature/harness-arquitetura]
+.../TEES-agente-lai       4c30176 [feature/agente-lai]
+.../TEES-agente-qualidade 4c30176 [feature/agente-qualidade]
+```
+
+Cada worktree tem diretório e branch próprios, compartilhando o mesmo `.git`, o que confirma o isolamento discutido: dois agentes podem trabalhar em paralelo, um por pasta, sem colidir no working directory.
