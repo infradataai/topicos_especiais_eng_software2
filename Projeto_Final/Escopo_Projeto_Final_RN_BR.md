@@ -3,7 +3,7 @@
 **Programa de Pós-Graduação em Tecnologia da Informação**
 **Disciplina:** Tópicos Avançados em Engenharia de Software 2 (Desenv. de Software com IA)
 **Professor:** Jean Mário Moreira de Lima
-**Aluno:** Flávio Eduardo Batista Moreira
+**Alunos:** Flávio Eduardo Batista Moreira e Bruno dos Santos Fernandes da Silva
 
 # Escopo do Projeto Final
 
