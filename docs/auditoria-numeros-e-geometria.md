@@ -181,7 +181,29 @@ mapa, com um ponto omitido por coordenada deslocada. Os sinistros sem medição,
 não ancorados, permanecem no mapa, para que a limpeza esconda apenas o que foi medido
 como fora.
 
-## 9. Cobertura de testes
+## 9. Unidade Padrão de Severidade nas duas escalas
+
+A caixa de cada trecho mostra a Unidade Padrão de Severidade, que pondera o número de
+sinistros pela gravidade de cada um. Duas escalas convivem na literatura e nos
+normativos, e ambas entram, para deixar visível que a escolha da escala muda o valor.
+
+A escala clássica, do Manual de Segurança Viária do DER-SP, pesa o acidente com danos
+materiais por um, o com feridos por cinco e o com mortes por treze. É a que o DNIT
+adotou na Metodologia para Identificação de Segmentos Críticos, de 2009, e por isso
+entra rotulada como UPS DNIT. A escala do DENATRAN pesa o acidente com danos materiais
+por um, o com ferido por quatro, o com ferido envolvendo pedestre por seis e o fatal
+por treze. A distinção do pedestre vem da tabela de pessoas, pelo campo de tipo de
+envolvido.
+
+As duas leituras foram conferidas contra o banco. No segmento 101BRN0132, com 84
+acidentes sem vítimas, 351 com ferido leve, 125 com ferido grave e 10 com óbito, a
+UPS DNIT é 2.594 e a UPS DENATRAN é 2.230. A diferença vem do peso do ferido, que cai
+de cinco para quatro, atenuado onde há pedestre, cujo peso sobe para seis. O cálculo é
+feito na consulta, e não altera o banco. As nossas quatro categorias distinguem ferido
+leve de grave, distinção que nenhuma das duas escalas usa, e ambas reúnem os feridos
+numa classe só.
+
+## 10. Cobertura de testes
 
 A camada de consulta e a de aplicação têm 131 testes automatizados, executados a cada
 mudança. Cobrem a agregação por segmento sem multiplicar o custo por safra, as duas
@@ -192,7 +214,7 @@ preferência pela geometria oficial com recuo para a aproximação. As três con
 numéricas deste documento foram executadas contra o banco real, e não sobre dados de
 teste.
 
-## 10. Registro das correções da sessão
+## 11. Registro das correções da sessão
 
 A sessão acumulou correções que valem registro, no mesmo espírito das anteriores.
 
@@ -217,6 +239,13 @@ segurança de vinte mil pontos.
 A primeira medição da faixa de domínio usou a geometria simplificada do banco, e o
 limiar de 50 metros ficava abaixo do erro de simplificação, de até 90 metros. A
 medição passou para a geometria cheia do shapefile, como registra a seção 8.
+
+O traçado de dois segmentos duplicava no mapa. O DNIT recodifica trechos entre safras,
+e o mesmo quilômetro entrava com o código antigo e com os novos. O código antigo passou
+a herdar a geometria dos vigentes sem desenhar linha própria, como registra a seção 7.
+
+A Unidade Padrão de Severidade entrou nas duas escalas, a do DNIT e a do DENATRAN, como
+registra a seção 9.
 
 Cada correção seguiu a mesma regra: o número foi conferido contra o banco, ou contra a
 fonte primária, antes de ser aceito.
