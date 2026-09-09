@@ -138,6 +138,21 @@ campos da tabela: segmento, BR, extensão, ocorrências, custo social, volume m�
 diário anual, e as quatro leituras de criticidade. O trecho sob o cursor engrossa e
 muda de cor, e volta ao estado anterior ao sair.
 
+Dois segmentos não casaram pelo código na safra 202507A, e a razão é um achado de
+qualidade do próprio SNV. O DNIT recodifica trechos entre safras: o segmento
+101BRN0130, que existiu de 2019 a 2023 no quilômetro 95,8 a 104,1 da BR-101, foi
+substituído em 2024 pelos códigos 101BRN0120 e 101BRN0125, que cobrem o mesmo
+quilômetro. O caso do 226BRN0176 é análogo na BR-226. A ancoragem, que casa cada
+sinistro com a safra do seu ano, distribui os sinistros do mesmo trecho físico por
+códigos diferentes conforme o ano: os de 2019 a 2023 no código antigo, os de 2024 e
+2025 nos novos. O traçado dos códigos ausentes foi montado pela união dos trechos
+vigentes que cobrem a mesma faixa de quilômetro, e o código antigo entra sem linha
+própria, para não desenhar um traçado sobreposto ao dos códigos vigentes. Os
+sinistros e o custo do código antigo permanecem, no mapa como pontos e na tabela como
+linha. A recodificação divide o custo do trecho físico entre os códigos das safras, e
+o tratamento pleno dessa divisão, com a canonização dos códigos numa safra de
+referência, fica registrado como tarefa para o artigo.
+
 ## 8. Limpeza geodésica pela faixa de domínio
 
 Parte dos sinistros aparecia no mapa longe do leito da rodovia, alguns a quilômetros
