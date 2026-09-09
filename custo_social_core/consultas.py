@@ -21,7 +21,7 @@ TABELAS_NUCLEO = ("ocorrencias", "custo_ocorrencia", "segmentos_snv", "ancoragem
 ORDENACOES_SEGMENTO = frozenset({
     "codigo", "br", "extensao", "custo_social", "ocorrencias",
     "vmda", "custo_por_km", "custo_por_veiculo_km",
-    "custo_por_km_ano", "custo_por_veiculo_km_ano",
+    "custo_por_km_ano", "custo_por_veiculo_km_ano", "ups_dnit", "ups_denatran",
 })
 ORDENACOES_OCORRENCIA = frozenset({"id", "br", "km", "ano", "custo_social"})
 
@@ -75,12 +75,29 @@ base AS (
                 THEN SUM(c.total) / s.extensao END AS custo_por_km,
            CASE WHEN MAX(e.vmda) > 0 AND s.extensao > 0
                 THEN SUM(c.total) / (MAX(e.vmda) * s.extensao * {DIAS_DO_ANO})
-                END AS custo_por_veiculo_km
+                END AS custo_por_veiculo_km,
+           -- UPS DNIT, Unidade Padrao de Severidade classica: danos materiais x1,
+           -- feridos x5, mortes x13 (DER-SP; DNIT, segmentos criticos, 2009)
+           SUM(CASE c.categoria
+                 WHEN 'sem_vitimas'      THEN 1
+                 WHEN 'com_vitima_leve'  THEN 5
+                 WHEN 'com_vitima_grave' THEN 5
+                 WHEN 'com_obito'        THEN 13
+                 ELSE 0 END) AS ups_dnit,
+           -- UPS DENATRAN: danos materiais x1, ferido x4, ferido com pedestre x6,
+           -- fatal x13. O pedestre vem da tabela de pessoas.
+           SUM(CASE
+                 WHEN c.categoria = 'com_obito'    THEN 13
+                 WHEN c.categoria = 'sem_vitimas'  THEN 1
+                 WHEN ped.id IS NOT NULL           THEN 6
+                 ELSE 4 END) AS ups_denatran
       FROM anc
       JOIN custo_ocorrencia c ON c.id = anc.id
       JOIN recente          r ON r.codigo = anc.codigo
       JOIN segmentos_snv    s ON s.codigo = r.codigo AND s.safra = r.safra
     LEFT JOIN exp           e ON e.codigo = s.codigo
+    LEFT JOIN (SELECT DISTINCT id FROM pessoas WHERE tipo_envolvido = 'Pedestre')
+                            ped ON ped.id = anc.id
      GROUP BY s.codigo, s.br, s.uf, s.km_inicial, s.km_final, s.extensao,
               s.regime, s.jurisdicao
 )

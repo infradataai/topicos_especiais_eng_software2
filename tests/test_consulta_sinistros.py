@@ -37,6 +37,9 @@ CREATE TABLE exposicao_segmento (
   ano INTEGER, codigo TEXT, br INTEGER, uf TEXT, extensao REAL,
   vmda REAL, n_postos INTEGER, sentidos_completos INTEGER, safra_vmda TEXT,
   PRIMARY KEY (ano, codigo));
+CREATE TABLE pessoas (
+  id TEXT, pesid TEXT, gravidade TEXT, idade INTEGER, sexo TEXT,
+  tipo_envolvido TEXT, PRIMARY KEY (id, pesid));
 """
 
 
@@ -61,9 +64,9 @@ def banco() -> sqlite3.Connection:
     )
     con.executemany(
         "INSERT INTO custo_ocorrencia VALUES (?,?,?,?,?,?,?)",
-        [("o1", 1_000_000.0, 900_000.0, 80_000.0, 20_000.0, "obito", "jun/2026"),
-         ("o2", 200_000.0, 150_000.0, 40_000.0, 10_000.0, "ferido_leve", "jun/2026"),
-         ("o3", 2_000_000.0, 1_800_000.0, 150_000.0, 50_000.0, "obito", "jun/2026")],
+        [("o1", 1_000_000.0, 900_000.0, 80_000.0, 20_000.0, "com_obito", "jun/2026"),
+         ("o2", 200_000.0, 150_000.0, 40_000.0, 10_000.0, "com_vitima_leve", "jun/2026"),
+         ("o3", 2_000_000.0, 1_800_000.0, 150_000.0, 50_000.0, "com_obito", "jun/2026")],
     )
     con.executemany(
         "INSERT INTO ancoragem VALUES (?,?,?,?,?)",
@@ -518,3 +521,27 @@ def test_codigo_sobreposto_nao_desenha_linha(banco):
     assert len(itens["101ABC"]["pontos"]) == 2
     assert itens["304XYZ"]["fonte_geometria"] == "SNV/DNIT (sobreposto)"
     assert itens["304XYZ"]["pontos"] == []
+
+
+def test_ups_dnit_pondera_por_gravidade(banco):
+    """UPS DNIT: danos materiais x1, feridos x5, mortes x13 (DER-SP/DNIT)."""
+    from custo_social_core import consultas
+    m = {s["codigo"]: s for s in consultas.segmentos_criticos(banco, "RN")}
+    # 101ABC tem o1 (obito=13) e o2 (leve=5) -> 18
+    assert m["101ABC"]["ups_dnit"] == 18
+    # 304XYZ tem o3 (obito=13) -> 13
+    assert m["304XYZ"]["ups_dnit"] == 13
+
+
+def test_ups_denatran_usa_pedestre(banco):
+    """UPS DENATRAN: ferido x4, ferido com pedestre x6, fatal x13, dano x1."""
+    from custo_social_core import consultas
+    # sem pedestre: 101ABC = o1 (fatal 13) + o2 (ferido 4) = 17
+    m = {s["codigo"]: s for s in consultas.segmentos_criticos(banco, "RN")}
+    assert m["101ABC"]["ups_denatran"] == 17
+    # marca o2 (ferido leve) como envolvendo pedestre -> passa de 4 para 6
+    banco.execute("INSERT INTO pessoas (id, pesid, tipo_envolvido) "
+                  "VALUES ('o2','p9','Pedestre')")
+    banco.commit()
+    m = {s["codigo"]: s for s in consultas.segmentos_criticos(banco, "RN")}
+    assert m["101ABC"]["ups_denatran"] == 19  # 13 + 6

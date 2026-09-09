@@ -192,6 +192,7 @@ const cor = (categoria) => CORES[categoria] || '#888';
 const CAMPOS_SEG = [
   ['br','BR'],['km_inicial','km inicial'],['km_final','km final'],
   ['extensao','extensao (km)'],['ocorrencias','ocorrencias'],
+  ['ups_dnit','UPS DNIT'],['ups_denatran','UPS DENATRAN'],
   ['custo_social','custo social'],['vmda','VMDa'],
   ['custo_por_km','R$/km'],['custo_por_km_ano','R$/km/ano'],
   ['custo_por_veiculo_km','R$/veic-km'],['custo_por_veiculo_km_ano','R$/veic-km/ano'],
