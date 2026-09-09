@@ -125,6 +125,7 @@ def _resposta_mapa(start_response):
  .tipseg div{display:flex;justify-content:space-between;gap:1.2rem;line-height:1.55}
  .tipseg div span{color:#555}
  .tipseg div b{color:#111;font-variant-numeric:tabular-nums}
+ .tipseg em{display:block;color:#0033aa;font-style:normal;font-weight:600;margin-bottom:.3rem}
  .quadro-ano{background:rgba(255,255,255,.95);padding:.5rem .65rem;border-radius:5px;
    box-shadow:0 1px 6px rgba(0,0,0,.3);font-size:.8rem;color:#222;min-width:190px}
  .quadro-ano strong{display:block;margin-bottom:.35rem;font-size:.82rem}
@@ -375,11 +376,13 @@ function centralizarKm(itens, br, km) {
     ? (km - s.km_inicial) / (s.km_final - s.km_inicial) : 0;
   const ponto = pontoAoLongo(s.pontos, Math.max(0, Math.min(1, f)));
   if (marcadorKm) mapa.removeLayer(marcadorKm);
-  // circleMarker em vez do icone padrao, que depende de imagem externa
+  // circleMarker em vez do icone padrao, que depende de imagem externa. O popup
+  // traz o km pesquisado e as mesmas informacoes do trecho de SNV
+  const html = '<div class="tipseg"><em>BR-' + escapar(s.br) + ' &middot; km ' +
+    escapar(km) + ' pesquisado</em></div>' + caixaSeg(s);
   marcadorKm = L.circleMarker(ponto, {radius: 9, color: '#0033aa', weight: 3,
       fillColor: '#3b82f6', fillOpacity: .9}).addTo(mapa)
-    .bindPopup('BR-' + escapar(s.br) + ' km ' + escapar(km) + '<br>' +
-      escapar(s.codigo)).openPopup();
+    .bindPopup(html, {maxWidth: 280, className: 'popup-seg'}).openPopup();
   mapa.setView(ponto, 14);
 }
 
