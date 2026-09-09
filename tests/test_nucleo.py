@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from Projeto_Final.custo_social_core import (
+from custo_social_core import (
     config,
     custo,
     exposicao,
@@ -45,24 +45,15 @@ def test_km_fora_da_faixa_nao_aproxima():
 # --- custo em quatro categorias ---
 
 def test_custo_soma_por_gravidade():
-    tabela = custo.CustoVitima(sem_feridos=40000.0, ferido_leve=20000.0,
-                               ferido_grave=120000.0, obito=1250000.0)
-    # ocorrencia com 2 leves e 1 grave, sem obito, sem dano avulso
-    total = custo.custo_ocorrencia(2, 1, 0, houve_dano=False, tabela=tabela)
-    assert total == 2 * 20000.0 + 1 * 120000.0
+    # 2 leves e 1 grave, em ocorrencia com vitimas feridas (R$ dez/2014)
+    total = custo.custo_pessoas({"ferido_leve": 2, "ferido_grave": 1}, "com_vitimas")
+    assert total == pytest.approx(2 * 8_469.44 + 125_133.91, abs=0.01)
 
 
-def test_dano_material_so_entra_sem_vitima():
-    tabela = custo.CustoVitima(40000.0, 20000.0, 120000.0, 1250000.0)
-    com_vitima = custo.custo_ocorrencia(1, 0, 0, houve_dano=True, tabela=tabela)
-    sem_vitima = custo.custo_ocorrencia(0, 0, 0, houve_dano=True, tabela=tabela)
-    assert com_vitima == 20000.0          # dano nao soma quando ha vitima
-    assert sem_vitima == 40000.0          # dano entra quando nao ha vitima
-
-
-def test_triangulacao_aceita_dentro_da_tolerancia():
-    assert custo.validar_triangulacao(190000.0) is True     # ~4% do Ipea
-    assert custo.validar_triangulacao(300000.0) is False    # muito acima
+def test_institucional_entra_uma_vez_por_ocorrencia():
+    r = custo.custo_ocorrencia({}, "sem_vitimas", aplicar_deflator=False)
+    assert r.subtotal_institucional == pytest.approx(453.35, abs=0.01)
+    assert r.total == pytest.approx(453.35, abs=0.01)
 
 
 # --- exposicao ---
@@ -70,14 +61,14 @@ def test_triangulacao_aceita_dentro_da_tolerancia():
 def test_custo_por_exposicao_separa_volume_de_risco():
     # mesmo custo, um trecho movimentado e outro vazio: a criticidade por
     # exposicao do trecho vazio e maior.
-    movimentado = exposicao.custo_por_exposicao(1_000_000, vmda=20000, extensao_km=10)
-    vazio = exposicao.custo_por_exposicao(1_000_000, vmda=2000, extensao_km=10)
+    movimentado = exposicao.criticidade(1_000_000, vmda=20000, extensao=10)
+    vazio = exposicao.criticidade(1_000_000, vmda=2000, extensao=10)
     assert vazio > movimentado
 
 
-def test_exposicao_nula_nao_divide():
-    with pytest.raises(ValueError):
-        exposicao.custo_por_exposicao(1000.0, vmda=0, extensao_km=10)
+def test_exposicao_nula_devolve_nulo_declarado():
+    # nulo declarado, e nao excecao: o segmento segue no ranque por km
+    assert exposicao.criticidade(1000.0, vmda=0, extensao=10) is None
 
 
 # --- subregistro ---
@@ -106,17 +97,14 @@ class ProvedorFalso:
 
     def sinistros(self, uf):
         return [
-            {"br": 101, "km": 5.0, "ano": 2020, "n_leves": 1, "n_graves": 0,
-             "n_mortos": 0, "houve_dano": False},
-            {"br": 101, "km": 8.0, "ano": 2020, "n_leves": 0, "n_graves": 0,
-             "n_mortos": 1, "houve_dano": False},
+            {"br": 101, "km": 5.0, "ano": 2020, "gravidade_ocorrencia": "com_vitimas",
+             "vetor_c": {"ferido_leve": 1, "Automóvel": 1}},
+            {"br": 101, "km": 8.0, "ano": 2020, "gravidade_ocorrencia": "com_fatalidade",
+             "vetor_c": {"obito": 1, "Motocicleta": 1}},
         ]
 
     def vmda_segmento(self, safra, br, km_inicial):
         return 10000.0
-
-    def tabela_custo_vitima(self, uf):
-        return custo.CustoVitima(40000.0, 20000.0, 120000.0, 1250000.0)
 
 
 def test_pipeline_rn_agrega_por_segmento_e_calcula_criticidade():
@@ -124,7 +112,12 @@ def test_pipeline_rn_agrega_por_segmento_e_calcula_criticidade():
     assert res.uf == "RN"
     assert len(res.segmentos) == 1
     seg = res.segmentos[0]
-    assert seg.custo_social == 20000.0 + 1250000.0     # 1 leve + 1 obito
+    # 1 ocorrencia com ferido leve + 1 com obito, ambas valoradas pelo vetor M
+    esperado = (
+        custo.custo_ocorrencia({"ferido_leve": 1, "Automóvel": 1}, "com_vitimas").total
+        + custo.custo_ocorrencia({"obito": 1, "Motocicleta": 1}, "com_fatalidade").total
+    )
+    assert seg.custo_social == pytest.approx(esperado, abs=0.01)
     assert seg.corredor_destaque is True                # BR-101 e corredor do RN
     assert seg.custo_por_exposicao is not None          # tem VMDa
     assert seg.custo_corrigido > seg.custo_social       # cenario central (1,4)

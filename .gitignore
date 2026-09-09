@@ -1,21 +1,60 @@
-.venv/
-venv/
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
+# ---------------------------------------------------------------------------
+# Dados brutos: nunca versionar. A pasta chama-se "dados". O padrao "data/**"
+# de uma versao anterior nunca casou, e por isso 378 arquivos .dbc do microdado
+# do SIM foram commitados em 07/09/2026, somando 807 MB. Bloqueio pela pasta E
+# pela extensao, por redundancia deliberada.
+#
+# Excecao unica: dados/consolidado.db, o banco consolidado de 8,5 MB que a
+# aplicacao consome. Sem ele a demonstracao nao roda em outra maquina. Os
+# 35 GB de origem permanecem fora e sao reproduziveis pelos scripts.
+# ---------------------------------------------------------------------------
+dados/*
+data/
+
+# Extensoes de dado, em qualquer lugar do repositorio
+*.csv
+*.tsv
+*.xls
+*.xlsx
+*.xlsm
+*.parquet
+*.db
+*.sqlite
+*.sqlite3
+*.zip
+*.7z
+*.gz
+*.rar
+# DATASUS: .dbc e o formato comprimido, .dbf o descomprimido
+*.dbc
+*.dbf
+# Geoespacial
+*.shp
+*.shx
+*.sbn
+*.sbx
+*.prj
+*.cpg
+*.kml
+*.kmz
+
+# Segredos e ambiente local
 .env
 .env.*
 *.key
 *.pem
 CLAUDE.local.md
 .claude/settings.local.json
-*.db
-*.sqlite
-*.sqlite3
-*.parquet
-*.csv
-*.xlsx
-*.xls
-.ruff_cache/
+
+# Caches de ferramentas
+__pycache__/
+*.pyc
 .pytest_cache/
+.ruff_cache/
 .mypy_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Excecao final: precisa vir depois de dados/* e de *.db para prevalecer.
+!dados/consolidado.db

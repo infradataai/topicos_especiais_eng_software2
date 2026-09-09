@@ -19,9 +19,9 @@ class ProvedorDeDados(Protocol):
 
     def safras_snv(self) -> list[str]: ...
     def segmentos_snv(self, safra: str, uf: str) -> list[referenciamento.SegmentoSNV]: ...
-    def sinistros(self, uf: str) -> list[dict]: ...   # br, km, ano, n_leves, n_graves, n_mortos, houve_dano
+    # cada sinistro traz: br, km, ano, gravidade_ocorrencia e o vetor C da ocorrencia
+    def sinistros(self, uf: str) -> list[dict]: ...
     def vmda_segmento(self, safra: str, br: int, km_inicial: float) -> float | None: ...
-    def tabela_custo_vitima(self, uf: str) -> custo.CustoVitima: ...
 
 
 @dataclass
@@ -67,7 +67,6 @@ def rodar(
     """
     corredores = set(config.CORREDORES_POR_UF.get(uf, []))
     safras = provedor.safras_snv()
-    tabela_custo = provedor.tabela_custo_vitima(uf)
 
     # Acumula custo por segmento, identificado pela chave (safra, br, km_inicial).
     acumulado: dict[tuple[str, int, float], ResultadoSegmento] = {}
@@ -90,8 +89,8 @@ def rodar(
             acumulado[chave] = linha
 
         linha.custo_social += custo.custo_ocorrencia(
-            sin["n_leves"], sin["n_graves"], sin["n_mortos"], sin["houve_dano"], tabela_custo
-        )
+            sin["vetor_c"], sin["gravidade_ocorrencia"]
+        ).total
 
     # Fecha as metricas por segmento.
     resultado = ResultadoPiloto(uf=uf, cenario_subregistro=cenario_subregistro)
@@ -99,12 +98,11 @@ def rodar(
         linha.custo_corrigido = subregistro.corrigir(linha.custo_social, cenario_subregistro)
         linha.custo_por_km = exposicao.custo_por_km(linha.custo_social, linha.extensao_km)
         vmda = provedor.vmda_segmento(safra, br, km_ini)
-        if vmda and vmda > 0:
-            linha.custo_por_exposicao = exposicao.custo_por_exposicao(
-                linha.custo_social, vmda, linha.extensao_km
-            )
-        else:
-            linha.exposicao_imputada = True  # declarada, tratada na fase 3
+        linha.custo_por_exposicao = exposicao.criticidade(
+            linha.custo_social, vmda, linha.extensao_km
+        )
+        # nulo declarado: o segmento segue no ranque por km, sem leitura por exposicao
+        linha.exposicao_imputada = linha.custo_por_exposicao is None
         resultado.segmentos.append(linha)
 
     return resultado

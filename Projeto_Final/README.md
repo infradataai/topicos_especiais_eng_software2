@@ -4,35 +4,50 @@ Piloto que calcula o custo social dos sinistros nas rodovias federais do Rio Gra
 
 ## Estrutura
 
+O núcleo saiu desta pasta e passou para a raiz do repositório na consolidação de 9 de
+setembro, registrada no `docs/adr/ADR-013_Consolidacao_do_Trabalho_no_Repositorio_da_Disciplina.md`.
+O esqueleto que ficava aqui tinha assinatura sem implementação, e o pacote da raiz o
+cobre inteiro, com testes.
+
 ```
+custo_social_core/          nucleo parametrizado por UF, na raiz do repositorio
+  config.py                 a UF e o parametro de escala
+  ingestao_prf.py           leitura dos arquivos anuais da PRF em quatro graos
+  vetor_m.py                Tabela 1 do Ipea, mapa de veiculos, deflator
+  custo.py                  produto escalar C x M, com as quatro categorias
+  snv.py                    leitura das safras e ancoragem por referencia linear
+  exposicao.py              VMDa do PNCT, veiculos-km e criticidade
+  saude.py                  agregados do DATASUS e cobertura de jurisdicao
+  persistencia.py           esquema SQLite de 11 tabelas, com proveniencia
+  referenciamento.py        primitivas de safra e segmento
+  subregistro.py            cenarios de correcao, hoje governados pelo ADR-012
+  pipeline.py               orquestrador: UF -> tabela por segmento
+scripts/
+  reconstruir_prf.py        reconstrucao da base da PRF a partir dos arquivos anuais
+  consolidar_e_ancorar.py   carga do banco consolidado de uma UF
+  run_nacional.py           a mesma logica nas 27 unidades da federacao
+tests/                      76 testes do nucleo, ao lado dos 30 da aplicacao
+dados/consolidado.db        banco consolidado, versionado por excecao declarada
 Projeto_Final/
-  Escopo_Projeto_Final_RN_BR.md     escopo completo, revisado
-  custo_social_core/                nucleo parametrizado por UF
-    config.py                       a UF e o unico parametro de escala
-    referenciamento.py              ancora o sinistro ao segmento do SNV (safra casada)
-    custo.py                        custo hibrido em 4 categorias (Ipea ancora + LAI)
-    exposicao.py                    criticidade ajustada por exposicao (PNCT/VMDa)
-    subregistro.py                  correcao PRF -> SIM por cenario
-    pipeline.py                     orquestrador: UF -> tabela por segmento
-  scripts/run_pilot.py              ponto de entrada (RN por padrao)
-  tests/test_nucleo.py              testes de logica pura + pipeline com provedor falso
-  docs/contratos.md                 contratos EARS de cada modulo
+  Escopo_Projeto_Final_RN_BR.md   escopo completo, revisado
+  README.md                       este arquivo
 ```
 
 ## Como rodar
 
 ```bash
 # na raiz do repositorio
-python -m Projeto_Final.scripts.run_pilot            # roda o RN
-python -m Projeto_Final.scripts.run_pilot --uf PB    # a mesma logica, outra UF
-python -m pytest Projeto_Final/tests/ -q             # testes
+python -m pytest -q                                  # 106 testes
+python scripts/consolidar_e_ancorar.py --uf RN       # reconstroi o banco do RN
+python -m src.consulta_web                           # sobe a consulta web
 ```
 
-O `run_pilot` usa hoje um provedor de demonstração, para exercitar o fluxo. A leitura dos dados reais (PRF, SNV, VMDa, LAI) entra na fase 2, por uma implementação de `ProvedorDeDados`.
+A carga completa precisa dos arquivos de origem, que ficam fora do controle de versão.
+Para consultar sem refazer a carga, o `dados/consolidado.db` já acompanha o repositório.
 
 ## Decisões e escopo
 
-A topologia de repositórios está no `docs/adr/ADR-004_Topologia_Repositorios.md`: o piloto RN é público, neste repositório; a escala nacional é o repositório privado `custo-social-sinistro-BR`, que reusa este núcleo. A arquitetura de monólito modular está no `docs/adr/ADR-003_Manter_Monolito_Modular.md`. O escopo completo, com o modelo de custo, a espacialização e o plano por fases, está em `Escopo_Projeto_Final_RN_BR.md`.
+A topologia de repositórios está no `docs/adr/ADR-004_Topologia_Repositorios.md`, e a consolidação do trabalho neste repositório está no `docs/adr/ADR-013_Consolidacao_do_Trabalho_no_Repositorio_da_Disciplina.md`. O `custo-social-sinistro-BR` permanece como a caixa privada da escala nacional, onde ficam os arquivos de origem. A arquitetura de monólito modular está no `docs/adr/ADR-003_Manter_Monolito_Modular.md`. O escopo completo, com o modelo de custo, a espacialização e o plano por fases, está em `Escopo_Projeto_Final_RN_BR.md`.
 
 ## Dados e privacidade
 

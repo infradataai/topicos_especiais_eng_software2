@@ -12,24 +12,30 @@ pipeline **M-LRSDI** de modelagem de sinistros rodoviários.
 - `.claude/settings.json`: permissões do agente (deny, ask, allow).
 - `.mcp.json`: servidores MCP (`sqlite-ouro` em leitura, `fs-lai` em leitura).
 - `.gitignore` e `.gitattributes`: proteção de dados e segredos, fim de linha.
-- `src/`: código do projeto (ex.: `parse_datas.py`, parsing determinístico de data).
+- `src/`: camada de aplicação (análise descritiva, consulta web, relatórios, carga da LAI).
+- `custo_social_core/`: núcleo de dados do projeto final (ingestão da PRF, custo, SNV,
+  exposição, saúde, persistência).
+- `scripts/`: pontos de entrada da carga e da execução nacional.
+- `dados/consolidado.db`: banco consolidado do piloto, versionado por exceção declarada.
 - `tests/`: testes em pytest.
-- `docs/adr/`: ADRs do trabalho, em espelho markdown versionável.
+- `docs/adr/`: os 13 ADRs do trabalho, em espelho markdown versionável.
+- `openspec/`: onze capacidades especificadas e as mudanças arquivadas.
 - `docs/prompts-comparacao.md`: comparativo de prompt fraco x eficaz (Etapa 4).
 - `Atividades/`: relatórios das atividades assíncronas em PDF.
 
 ## Comandos
 
 ```bash
-pip install pandas pytest
-pytest -q          # roda os testes
+pip install -r requirements.txt
+pytest -q          # 106 testes: 30 da aplicação e 76 do núcleo de dados
 ```
 
 ## O que NÃO há aqui
 
-Dados brutos, bancos e o código do pipeline vivem no repositório da tese
-(`D:\PPgTI_UFRN\VSCODE\Tese_BR`). Este ambiente os referencia por variável de
-ambiente (`TESE_DB`, `LAI_DIR`), sem duplicar nem versionar dados.
+Os arquivos de origem, com 35 GB entre PRF, SNV, RENAEST e DATASUS, ficam fora do
+controle de versão. Eles vivem no repositório privado `custo-social-sinistro-BR` e são
+reproduzíveis pelos scripts de ingestão. A única exceção versionada é o
+`dados/consolidado.db`, com 8,5 MB, para que a demonstração rode em outra máquina.
 
 ## Módulos do trabalho
 

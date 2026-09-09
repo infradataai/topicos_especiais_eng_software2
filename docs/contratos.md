@@ -1,6 +1,6 @@
 # Contratos do núcleo (EARS)
 
-Cada módulo do núcleo declara o seu contrato em notação EARS, para que a implementação da fase 2 seja rastreável até uma regra verificável. Os identificadores de código ficam em inglês; a prosa, em português, pela convenção do ADR-009.
+Cada módulo do núcleo declara o seu contrato em notação EARS, para que a implementação da fase 2 seja rastreável até uma regra verificável. Os identificadores de código ficam em inglês; a prosa, em português, pela convenção do ADR-012.
 
 ## referenciamento
 
