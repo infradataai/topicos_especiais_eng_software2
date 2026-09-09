@@ -95,6 +95,9 @@ geometria_segmento = Table(
     Column("codigo", String, primary_key=True),
     Column("br", Integer), Column("uf", String),
     Column("pontos", String),   # JSON: lista de [lat, lng] simplificada
+    # 0 quando o codigo e antigo e o trecho ja e desenhado por codigos vigentes,
+    # para nao desenhar linha sobreposta. O custo e a contagem nao dependem disso.
+    Column("desenhar", Integer),
 )
 qualidade_geo = Table(
     "qualidade_geo", metadata,

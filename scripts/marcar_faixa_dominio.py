@@ -39,15 +39,22 @@ def _projecao(lat0: float):
     return lambda lat, lng: (lng * kx, lat * ky)
 
 
-def _geometria_por_br(shp: str | Path, uf: str, projeta):
-    """Le o shapefile e devolve, por BR, a geometria da UF projetada em metros."""
+def _geometria_da_malha(shp: str | Path, uf: str, projeta):
+    """Le o shapefile e devolve a geometria da UF, por BR e como malha inteira.
+
+    A geometria por BR mede o sinistro contra a sua propria rodovia. A malha
+    inteira, uniao de todas as BRs, mede o sinistro sem BR ou sem ancoragem, que
+    de outro modo ficaria sem avaliacao.
+    """
     import shapefile
     from shapely.geometry import LineString, MultiLineString
+    from shapely.ops import unary_union
 
     leitor = shapefile.Reader(str(shp))
     campos = [f[0] for f in leitor.fields[1:]]
     i_br, i_uf = campos.index("vl_br"), campos.index("sg_uf")
     linhas: dict[int, list] = defaultdict(list)
+    todas: list = []
     for registro in leitor.iterShapeRecords():
         rec = registro.record
         if rec[i_uf] != uf:
@@ -55,12 +62,14 @@ def _geometria_por_br(shp: str | Path, uf: str, projeta):
         pontos = registro.shape.points
         if len(pontos) < 2:
             continue
+        linha = LineString([projeta(y, x) for x, y in pontos])
+        todas.append(linha)
         try:
-            br = int(rec[i_br])
+            linhas[int(rec[i_br])].append(linha)
         except (TypeError, ValueError):
-            continue
-        linhas[br].append(LineString([projeta(y, x) for x, y in pontos]))
-    return {br: MultiLineString(ls) for br, ls in linhas.items()}
+            pass
+    geo_br = {br: MultiLineString(ls) for br, ls in linhas.items()}
+    return geo_br, unary_union(todas)
 
 
 def _criar_tabela(con: sqlite3.Connection) -> None:
@@ -81,24 +90,26 @@ def marcar_faixa(shp: str | Path, uf: str, con: sqlite3.Connection, *,
 
     uf = uf.upper()
     projeta = _projecao(lat0)
-    geo_br = _geometria_por_br(shp, uf, projeta)
+    geo_br, geo_malha = _geometria_da_malha(shp, uf, projeta)
     _criar_tabela(con)
 
+    # todas as ocorrencias com coordenada, ancoradas ou nao: o sinistro sem BR
+    # ou sem ancoragem tambem e um erro de coordenada a limpar, medido contra a
+    # malha inteira
     consulta = (
         "SELECT o.id, o.br, o.latitude, o.longitude "
         "  FROM ocorrencias o "
-        "  JOIN ancoragem a ON a.id = o.id "
-        " WHERE o.uf = ? AND a.codigo_segmento IS NOT NULL "
+        " WHERE o.uf = ? "
         "   AND o.latitude IS NOT NULL AND o.longitude IS NOT NULL"
     )
-    total = fora = sem_geo = 0
+    total = fora = sem_br = 0
     dist_max = 0.0
     registros = []
     for _id, br, lat, lng in con.execute(consulta, (uf,)):
         geo = geo_br.get(br)
         if geo is None:
-            sem_geo += 1
-            continue
+            geo = geo_malha
+            sem_br += 1
         d = geo.distance(Point(projeta(lat, lng)))
         dentro = 1 if d <= faixa_m else 0
         fora += 1 - dentro
@@ -112,7 +123,7 @@ def marcar_faixa(shp: str | Path, uf: str, con: sqlite3.Connection, *,
         registros,
     )
     con.commit()
-    return {"total": total, "fora": fora, "sem_geometria": sem_geo,
+    return {"total": total, "fora": fora, "sem_br": sem_br,
             "distancia_maxima_m": round(dist_max, 1), "faixa_m": faixa_m}
 
 
@@ -134,7 +145,7 @@ def main() -> None:
         con.close()
     print(f"marcados {r['total']} sinistros de {args.uf}, faixa {r['faixa_m']:.0f} m")
     print(f"  fora da faixa: {r['fora']} ({100*r['fora']/max(r['total'],1):.1f}%)")
-    print(f"  sem geometria da BR: {r['sem_geometria']}")
+    print(f"  sem BR, medidos contra a malha inteira: {r['sem_br']}")
     print(f"  distancia maxima: {r['distancia_maxima_m']:,.1f} m")
 
 

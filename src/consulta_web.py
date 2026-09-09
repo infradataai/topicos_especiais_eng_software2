@@ -125,6 +125,14 @@ def _resposta_mapa(start_response):
  .tipseg div{display:flex;justify-content:space-between;gap:1.2rem;line-height:1.55}
  .tipseg div span{color:#555}
  .tipseg div b{color:#111;font-variant-numeric:tabular-nums}
+ .quadro-ano{background:rgba(255,255,255,.95);padding:.5rem .65rem;border-radius:5px;
+   box-shadow:0 1px 6px rgba(0,0,0,.3);font-size:.8rem;color:#222;min-width:190px}
+ .quadro-ano strong{display:block;margin-bottom:.35rem;font-size:.82rem}
+ .quadro-ano .corpo div{display:flex;justify-content:space-between;gap:1.5rem;line-height:1.6}
+ .quadro-ano .corpo div span{color:#555}
+ .quadro-ano .corpo div b{font-variant-numeric:tabular-nums}
+ .quadro-ano .media{border-top:1px solid #bbb;margin-top:.3rem;padding-top:.3rem;font-weight:600}
+ .quadro-ano .media span{color:#111 !important}
 </style>
 </head>
 <body>
@@ -205,7 +213,7 @@ function caixaSeg(s) {
       '<b>' + escapar(celulaSeg(c, s[c])) + '</b></div>').join('') + '</div>';
 }
 
-let mapa = null, camada = null, camadaSeg = null;
+let mapa = null, camada = null, camadaSeg = null, quadroAno = null;
 if (window.L) {
   mapa = L.map('mapa').setView([-5.8, -36.0], 7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -223,9 +231,27 @@ if (window.L) {
     return div;
   };
   legenda.addTo(mapa);
+
+  quadroAno = L.control({position: 'topright'});
+  quadroAno.onAdd = function () {
+    const div = L.DomUtil.create('div', 'quadro-ano');
+    div.innerHTML = '<strong>Custo social por ano</strong>' +
+      '<div class="corpo">carregando...</div>';
+    return div;
+  };
+  quadroAno.addTo(mapa);
 } else {
   $('#alerta').innerHTML = '<p class="aviso">A biblioteca do mapa nao carregou. ' +
     'A tabela de segmentos continua disponivel.</p>';
+}
+
+function atualizarQuadroAno(dados) {
+  const el = document.querySelector('.quadro-ano .corpo');
+  if (!el) return;
+  const linhas = (dados.anos || []).map((a) =>
+    '<div><span>' + escapar(a.ano) + '</span><b>' + escapar(moeda(a.custo)) + '</b></div>').join('');
+  el.innerHTML = linhas +
+    '<div class="media"><span>media</span><b>' + escapar(moeda(dados.media)) + '</b></div>';
 }
 
 async function consultar() {
@@ -280,6 +306,9 @@ async function consultar() {
 
   const itens = await desenharTrechos(uf);
   if (km) centralizarKm(itens, br, parseFloat(km.replace(',', '.')));
+
+  const rAno = await fetch('/api/custo_por_ano?uf=' + encodeURIComponent(uf));
+  if (rAno.ok) atualizarQuadroAno(await rAno.json());
 }
 
 async function desenharTrechos(uf) {
@@ -477,7 +506,8 @@ def criar_aplicacao(con: sqlite3.Connection):
 
         # --- esquema de sinistros (nucleo do projeto final) -------------------
         if caminho in {"/api/segmentos", "/api/ocorrencias", "/api/resumo",
-                       "/api/segmentos_geo", "/api/ocorrencias_geo"}:
+                       "/api/segmentos_geo", "/api/ocorrencias_geo",
+                       "/api/custo_por_ano"}:
             if not consultas.tem_esquema_de_sinistros(con):
                 return _resposta_json(
                     start_response, "400 Bad Request",
@@ -498,6 +528,10 @@ def criar_aplicacao(con: sqlite3.Connection):
 
             if caminho == "/api/resumo":
                 return _resposta_json(start_response, "200 OK", consultas.resumo(con, uf))
+
+            if caminho == "/api/custo_por_ano":
+                return _resposta_json(start_response, "200 OK",
+                                      consultas.custo_por_ano(con, uf))
 
             if caminho == "/api/segmentos_geo":
                 return _resposta_json(

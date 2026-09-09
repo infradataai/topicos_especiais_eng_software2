@@ -432,3 +432,89 @@ def test_marca_dentro_e_fora_da_faixa(tmp_path):
     assert r["total"] == 2 and r["fora"] == 1
     marca = dict(con.execute("SELECT id, dentro_faixa FROM qualidade_geo").fetchall())
     assert marca["a"] == 1 and marca["b"] == 0
+
+
+def test_custo_por_ano_soma_e_media(banco):
+    from custo_social_core import consultas
+    r = consultas.custo_por_ano(banco, "RN")
+    anos = {a["ano"]: a["custo"] for a in r["anos"]}
+    assert set(anos) == {2021, 2023}  # o banco de teste tem esses dois anos
+    assert r["total"] == pytest.approx(sum(anos.values()))
+    assert r["media"] == pytest.approx(r["total"] / 2)
+
+
+def test_rota_custo_por_ano(banco):
+    import json
+    app = criar_aplicacao(banco)
+    status, _, corpo = chamar(app, "/api/custo_por_ano", "uf=RN")
+    assert status.startswith("200")
+    dados = json.loads(corpo)
+    assert "media" in dados and "anos" in dados
+
+
+def test_marca_cobre_ocorrencia_sem_br(tmp_path):
+    """O ponto sem BR e medido contra a malha inteira, e nao fica sem marca."""
+    import shapefile, sqlite3
+    from scripts.marcar_faixa_dominio import marcar_faixa
+    caminho = tmp_path / "snv.shp"
+    w = shapefile.Writer(str(caminho), shapeType=shapefile.POLYLINE)
+    w.field("vl_br", "C"); w.field("sg_uf", "C"); w.field("vl_codigo", "C")
+    w.line([[(-35.20, -5.80), (-35.20, -5.70)]]); w.record("101", "RN", "101BRN0001")
+    w.close()
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE ocorrencias (id TEXT PRIMARY KEY, uf TEXT, br INTEGER,"
+                " latitude REAL, longitude REAL)")
+    # ocorrencia sem BR (None), longe de qualquer via
+    con.execute("INSERT INTO ocorrencias VALUES ('x','RN',NULL,-4.50,-37.50)")
+    con.commit()
+    r = marcar_faixa(caminho, "RN", con, faixa_m=50)
+    assert r["total"] == 1 and r["sem_br"] == 1
+    assert con.execute("SELECT dentro_faixa FROM qualidade_geo WHERE id='x'").fetchone()[0] == 0
+
+
+def test_ingestao_preenche_codigo_ausente_por_km(tmp_path):
+    """Codigo do nosso banco que o shapefile nao traz e montado por km."""
+    import shapefile, sqlite3
+    from scripts.ingerir_geometria_snv import ingerir_geometria
+    caminho = tmp_path / "snv.shp"
+    w = shapefile.Writer(str(caminho), shapeType=shapefile.POLYLINE)
+    w.field("vl_br", "C"); w.field("sg_uf", "C"); w.field("vl_codigo", "C")
+    w.field("vl_km_inic", "N", decimal=1); w.field("vl_km_fina", "N", decimal=1)
+    # dois trechos contiguos na BR-101, km 0..5 e 5..10
+    w.line([[(-35.20, -5.80), (-35.20, -5.78)]]); w.record("101", "RN", "101BRN0120", 0.0, 5.0)
+    w.line([[(-35.20, -5.78), (-35.20, -5.76)]]); w.record("101", "RN", "101BRN0125", 5.0, 10.0)
+    w.close()
+
+    con = sqlite3.connect(":memory:")
+    # o nosso banco tem o codigo antigo 101BRN0130, cobrindo km 0..10
+    con.executescript(
+        "CREATE TABLE segmentos_snv (safra TEXT, codigo TEXT, br INTEGER,"
+        " km_inicial REAL, km_final REAL, PRIMARY KEY (safra, codigo));"
+        "CREATE TABLE ancoragem (id TEXT PRIMARY KEY, codigo_segmento TEXT);"
+        "CREATE TABLE ocorrencias (id TEXT PRIMARY KEY, uf TEXT);")
+    con.execute("INSERT INTO segmentos_snv VALUES ('201910A','101BRN0130',101,0.0,10.0)")
+    con.execute("INSERT INTO ancoragem VALUES ('o1','101BRN0130')")
+    con.execute("INSERT INTO ocorrencias VALUES ('o1','RN')")
+    con.commit()
+
+    ingerir_geometria(caminho, "RN", "202507A", con)
+    codigos = {r[0] for r in con.execute("SELECT codigo FROM geometria_segmento")}
+    assert "101BRN0130" in codigos   # preenchido por km, mesmo ausente no shapefile
+
+
+def test_codigo_sobreposto_nao_desenha_linha(banco):
+    """O codigo antigo, ja coberto por codigos vigentes, nao gera linha."""
+    from custo_social_core import consultas
+    banco.execute("CREATE TABLE geometria_segmento (safra TEXT, codigo TEXT,"
+                  " br INTEGER, uf TEXT, pontos TEXT, desenhar INTEGER,"
+                  " PRIMARY KEY (safra, codigo))")
+    import json as _json
+    linha = _json.dumps([[-5.7, -35.2], [-5.71, -35.21]])
+    banco.execute("INSERT INTO geometria_segmento VALUES ('202507A','101ABC',101,'RN',?,1)", (linha,))
+    banco.execute("INSERT INTO geometria_segmento VALUES ('202507A','304XYZ',304,'RN',?,0)", (linha,))
+    banco.commit()
+    itens = {i["codigo"]: i for i in consultas.geometria_segmentos(banco, "RN")}
+    assert itens["101ABC"]["fonte_geometria"] == "SNV/DNIT"
+    assert len(itens["101ABC"]["pontos"]) == 2
+    assert itens["304XYZ"]["fonte_geometria"] == "SNV/DNIT (sobreposto)"
+    assert itens["304XYZ"]["pontos"] == []

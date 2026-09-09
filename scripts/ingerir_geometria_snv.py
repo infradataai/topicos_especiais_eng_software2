@@ -45,8 +45,28 @@ def _criar_tabela(con: sqlite3.Connection) -> None:
     con.execute(
         "CREATE TABLE IF NOT EXISTS geometria_segmento ("
         " safra TEXT, codigo TEXT, br INTEGER, uf TEXT, pontos TEXT,"
-        " PRIMARY KEY (safra, codigo))"
+        " desenhar INTEGER, PRIMARY KEY (safra, codigo))"
     )
+
+
+def _segmentos_do_banco(con: sqlite3.Connection, uf: str) -> dict:
+    """Codigo -> (br, km_inicial, km_final) dos segmentos ancorados da UF.
+
+    Serve para preencher, por sobreposicao de km, o tracado dos codigos que o
+    shapefile nao traz sob o mesmo codigo, por recodificacao entre safras.
+    """
+    if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                       "AND name='segmentos_snv'").fetchone():
+        return {}
+    cursor = con.execute(
+        "SELECT s.codigo, s.br, MIN(s.km_inicial), MAX(s.km_final) "
+        "  FROM segmentos_snv s "
+        "  JOIN ancoragem a ON a.codigo_segmento = s.codigo "
+        "  JOIN ocorrencias o ON o.id = a.id "
+        " WHERE o.uf = :uf GROUP BY s.codigo, s.br",
+        {"uf": uf},
+    )
+    return {cod: (br, ki, kf) for cod, br, ki, kf in cursor}
 
 
 def ingerir_geometria(shp: str | Path, uf: str, safra: str,
@@ -55,7 +75,9 @@ def ingerir_geometria(shp: str | Path, uf: str, safra: str,
     """Le o shapefile, filtra a UF e grava o tracado simplificado de cada trecho.
 
     A leitura usa o codigo do trecho (`vl_codigo`), identico ao codigo do nosso
-    banco. Repete a mesma UF e safra em cada linha, para a consulta filtrar.
+    banco. Os codigos que o shapefile nao traz, por recodificacao entre safras,
+    sao preenchidos pela uniao dos trechos da mesma BR que cobrem a faixa de km
+    do segmento, na ordem do km.
 
     Returns:
         Quantos segmentos foram gravados.
@@ -67,30 +89,55 @@ def ingerir_geometria(shp: str | Path, uf: str, safra: str,
     i_cod = campos.index("vl_codigo")
     i_uf = campos.index("sg_uf")
     i_br = campos.index("vl_br")
+    # os campos de km sustentam o preenchimento por sobreposicao; sem eles, so o
+    # casamento por codigo ocorre
+    i_ki = campos.index("vl_km_inic") if "vl_km_inic" in campos else None
+    i_kf = campos.index("vl_km_fina") if "vl_km_fina" in campos else None
 
     _criar_tabela(con)
     uf = uf.upper()
-    vistos: set[str] = set()
-    gravados = 0
+    por_codigo: dict[str, tuple] = {}       # codigo -> (br, pontos)
+    por_br: dict[int, list] = {}            # br -> [(km_ini, km_fim, pontos)]
     for registro in leitor.iterShapeRecords():
         rec = registro.record
         if rec[i_uf] != uf:
             continue
-        codigo = rec[i_cod]
-        if codigo in vistos:
-            continue
-        vistos.add(codigo)
-        pontos = simplificar(list(registro.shape.points), tolerancia)
+        pontos = list(registro.shape.points)
         try:
             br = int(rec[i_br])
         except (TypeError, ValueError):
             br = None
+        por_codigo.setdefault(rec[i_cod], (br, pontos))
+        if br is not None and i_ki is not None and i_kf is not None:
+            por_br.setdefault(br, []).append((rec[i_ki], rec[i_kf], pontos))
+
+    def grava(codigo, br, pontos_brutos, desenhar):
         con.execute(
-            "INSERT OR REPLACE INTO geometria_segmento (safra, codigo, br, uf, pontos)"
-            " VALUES (?, ?, ?, ?, ?)",
-            (safra, codigo, br, uf, json.dumps(pontos)),
+            "INSERT OR REPLACE INTO geometria_segmento"
+            " (safra, codigo, br, uf, pontos, desenhar) VALUES (?, ?, ?, ?, ?, ?)",
+            (safra, codigo, br, uf, json.dumps(simplificar(pontos_brutos, tolerancia)),
+             desenhar),
         )
+
+    gravados = 0
+    for cod, (br, pontos) in por_codigo.items():
+        grava(cod, br, pontos, 1)
         gravados += 1
+
+    # preenche os codigos do nosso banco ausentes no shapefile, por sobreposicao
+    # de km na mesma BR, na ordem do km. Sao codigos antigos, ja desenhados pelos
+    # codigos vigentes, entao entram com desenhar = 0, para nao dobrar a linha.
+    for cod, (br, ki, kf) in _segmentos_do_banco(con, uf).items():
+        if cod in por_codigo or br not in por_br:
+            continue
+        cobrem = sorted((s for s in por_br[br] if s[1] >= ki and s[0] <= kf),
+                        key=lambda s: s[0])
+        if not cobrem:
+            continue
+        pontos = [p for _, _, pts in cobrem for p in pts]
+        grava(cod, br, pontos, 0)
+        gravados += 1
+
     con.commit()
     return gravados
 

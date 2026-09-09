@@ -255,10 +255,18 @@ def _geometria_oficial(con: sqlite3.Connection, uf: str) -> dict[str, list]:
     """
     if not _tem_tabela(con, "geometria_segmento"):
         return {}
-    cursor = con.execute(
-        "SELECT codigo, pontos FROM geometria_segmento WHERE uf = :uf", {"uf": uf}
+    tem_desenhar = any(
+        c[1] == "desenhar"
+        for c in con.execute("PRAGMA table_info(geometria_segmento)")
     )
-    return {cod: json.loads(pts) for cod, pts in cursor if pts}
+    coluna = "desenhar" if tem_desenhar else "1"
+    cursor = con.execute(
+        f"SELECT codigo, pontos, {coluna} FROM geometria_segmento WHERE uf = :uf",
+        {"uf": uf},
+    )
+    # codigo -> (pontos, desenhar). O sobreposto (desenhar = 0) tem geometria
+    # oficial, mas nao gera linha, para nao dobrar o tracado do trecho vigente
+    return {cod: (json.loads(pts), bool(des)) for cod, pts, des in cursor if pts}
 
 
 def _geometria_por_sinistros(con: sqlite3.Connection, uf: str,
@@ -301,13 +309,39 @@ def geometria_segmentos(con: sqlite3.Connection, uf: str, *,
     for cod, s in stats.items():
         item = dict(s)
         if cod in oficial:
-            item["pontos"] = oficial[cod]
-            item["fonte_geometria"] = "SNV/DNIT"
+            pontos, desenhar = oficial[cod]
+            if desenhar:
+                item["pontos"] = pontos
+                item["fonte_geometria"] = "SNV/DNIT"
+            else:
+                # trecho ja desenhado pelo codigo vigente: sem linha propria
+                item["pontos"] = []
+                item["fonte_geometria"] = "SNV/DNIT (sobreposto)"
         else:
             item["pontos"] = aprox.get(cod, [])
             item["fonte_geometria"] = "aproximacao"
         itens.append(item)
     return itens
+
+
+def custo_por_ano(con: sqlite3.Connection, uf: str) -> dict:
+    """Custo social por ano na unidade da federacao, com a media anual.
+
+    Cobre todos os sinistros, independentemente da faixa de dominio, porque o
+    custo nao depende da coordenada. A media divide o total pelo numero de anos
+    com ocorrencia.
+    """
+    cursor = con.execute(
+        "SELECT o.ano, COUNT(*) AS ocorrencias, COALESCE(SUM(c.total), 0) AS custo "
+        "  FROM ocorrencias o LEFT JOIN custo_ocorrencia c ON c.id = o.id "
+        " WHERE o.uf = :uf "
+        " GROUP BY o.ano ORDER BY o.ano",
+        {"uf": uf},
+    )
+    anos = _dicionarios(cursor)
+    total = sum(a["custo"] for a in anos)
+    media = total / len(anos) if anos else 0
+    return {"anos": anos, "total": total, "media": media, "n_anos": len(anos)}
 
 
 def resumo(con: sqlite3.Connection, uf: str) -> dict:
