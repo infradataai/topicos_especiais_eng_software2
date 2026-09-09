@@ -190,21 +190,35 @@ LIMITE_PONTOS_MAPA = 20_000
 
 def ocorrencias_geo(con: sqlite3.Connection, uf: str, *, br: int | None = None,
                     ano: int | None = None, limite: int = LIMITE_PONTOS_MAPA) -> list[dict]:
-    """Todos os pontos de sinistro com coordenada, para a camada do mapa.
+    """Pontos de sinistro dentro da faixa de dominio, para a camada do mapa.
 
     Sem paginacao: a camada do mapa precisa de todos os pontos, e nao de uma
     pagina. So os campos que o marcador usa entram, para o pacote ficar leve.
     O teto evita travar o navegador quando o filtro e amplo.
+
+    Quando a marca de qualidade geodesica existe, a consulta filtra os sinistros
+    fora da faixa de dominio, que sao erros de coordenada. Sem a marca, devolve
+    todos, para o mapa nao ficar vazio. O custo e a contagem por segmento nao
+    dependem desta consulta e seguem sobre todos os sinistros.
     """
     where, valores = _filtros_ocorrencia(uf, br, ano)
     valores["limite"] = limite
+    # so esconde o que foi medido como fora da faixa; o nao medido permanece,
+    # por LEFT JOIN, para nao remover sinistro por falta de medicao
+    if _tem_tabela(con, "qualidade_geo"):
+        junta = "LEFT JOIN qualidade_geo q ON q.id = o.id"
+        filtro_faixa = " AND (q.id IS NULL OR q.dentro_faixa = 1)"
+    else:
+        junta = filtro_faixa = ""
     cursor = con.execute(
         "SELECT o.br, o.km, o.ano, o.latitude, o.longitude, "
         "       c.total AS custo_social, c.categoria, a.codigo_segmento AS segmento "
         "  FROM ocorrencias o "
+        f"  {junta} "
         "  LEFT JOIN custo_ocorrencia c ON c.id = o.id "
         "  LEFT JOIN ancoragem       a ON a.id = o.id "
-        f" WHERE {where} AND o.latitude IS NOT NULL AND o.longitude IS NOT NULL "
+        f" WHERE {where} AND o.latitude IS NOT NULL AND o.longitude IS NOT NULL"
+        f"{filtro_faixa} "
         " LIMIT :limite",
         valores,
     )

@@ -96,6 +96,12 @@ geometria_segmento = Table(
     Column("br", Integer), Column("uf", String),
     Column("pontos", String),   # JSON: lista de [lat, lng] simplificada
 )
+qualidade_geo = Table(
+    "qualidade_geo", metadata,
+    Column("id", String, primary_key=True),
+    Column("br", Integer), Column("distancia_m", Float),
+    Column("dentro_faixa", Integer),
+)
 proveniencia_t = Table(
     "proveniencia", metadata,
     Column("tabela", String, primary_key=True),

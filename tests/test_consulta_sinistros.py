@@ -366,3 +366,69 @@ def test_rota_ocorrencias_geo_responde(banco):
     dados = json.loads(corpo)
     assert dados["total"] == len([i for i in dados["items"]])
     assert all(str(i["br"]) == "101" for i in dados["items"])
+
+
+# --- faixa de dominio (limpeza geodesica) --------------------------------
+
+def _marca_qualidade(con, dentro_ids, fora_ids):
+    con.execute("CREATE TABLE qualidade_geo (id TEXT PRIMARY KEY, br INTEGER,"
+                " distancia_m REAL, dentro_faixa INTEGER)")
+    for i in dentro_ids:
+        con.execute("INSERT INTO qualidade_geo VALUES (?,?,?,?)", (i, 101, 10.0, 1))
+    for i in fora_ids:
+        con.execute("INSERT INTO qualidade_geo VALUES (?,?,?,?)", (i, 101, 5000.0, 0))
+    con.commit()
+
+
+def test_mapa_filtra_pela_faixa(banco):
+    from custo_social_core import consultas
+    # o1 e o2 sao da BR-101; marca o2 como fora
+    _marca_qualidade(banco, dentro_ids=["o1", "o3"], fora_ids=["o2"])
+    ids = {o["km"]: o for o in consultas.ocorrencias_geo(banco, "RN")}
+    # o2 (km 6.0) nao deve aparecer
+    kms = [o["km"] for o in consultas.ocorrencias_geo(banco, "RN")]
+    assert 6.0 not in kms
+    assert len(kms) == 2
+
+
+def test_mapa_sem_marca_mostra_todos(banco):
+    from custo_social_core import consultas
+    # sem a tabela qualidade_geo, todos aparecem
+    assert len(consultas.ocorrencias_geo(banco, "RN")) == 3
+
+
+def test_custo_por_segmento_ignora_a_faixa(banco):
+    """A limpeza e do mapa: o custo por segmento nao muda."""
+    from custo_social_core import consultas
+    antes = {s["codigo"]: s["custo_social"] for s in consultas.segmentos_criticos(banco, "RN")}
+    _marca_qualidade(banco, dentro_ids=["o1"], fora_ids=["o2", "o3"])
+    depois = {s["codigo"]: s["custo_social"] for s in consultas.segmentos_criticos(banco, "RN")}
+    assert antes == depois
+
+
+def test_marca_dentro_e_fora_da_faixa(tmp_path):
+    import shapefile, sqlite3
+    from scripts.marcar_faixa_dominio import marcar_faixa
+    # uma BR-101 reta, e dois sinistros: um sobre ela, outro a ~5 km
+    caminho = tmp_path / "snv.shp"
+    w = shapefile.Writer(str(caminho), shapeType=shapefile.POLYLINE)
+    w.field("vl_br", "C"); w.field("sg_uf", "C"); w.field("vl_codigo", "C")
+    w.line([[(-35.20, -5.80), (-35.20, -5.70)]]); w.record("101", "RN", "101BRN0001")
+    w.close()
+
+    con = sqlite3.connect(":memory:")
+    con.executescript(
+        "CREATE TABLE ocorrencias (id TEXT PRIMARY KEY, uf TEXT, br INTEGER,"
+        " latitude REAL, longitude REAL);"
+        "CREATE TABLE ancoragem (id TEXT PRIMARY KEY, codigo_segmento TEXT);")
+    # sobre o eixo (mesma longitude) e deslocado ~5 km em longitude
+    con.execute("INSERT INTO ocorrencias VALUES ('a','RN',101,-5.75,-35.200)")
+    con.execute("INSERT INTO ocorrencias VALUES ('b','RN',101,-5.75,-35.245)")
+    con.executemany("INSERT INTO ancoragem VALUES (?,?)",
+                    [("a", "101BRN0001"), ("b", "101BRN0001")])
+    con.commit()
+
+    r = marcar_faixa(caminho, "RN", con, faixa_m=50)
+    assert r["total"] == 2 and r["fora"] == 1
+    marca = dict(con.execute("SELECT id, dentro_faixa FROM qualidade_geo").fetchall())
+    assert marca["a"] == 1 and marca["b"] == 0
