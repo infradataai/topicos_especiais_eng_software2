@@ -138,7 +138,35 @@ campos da tabela: segmento, BR, extensão, ocorrências, custo social, volume m�
 diário anual, e as quatro leituras de criticidade. O trecho sob o cursor engrossa e
 muda de cor, e volta ao estado anterior ao sair.
 
-## 8. Cobertura de testes
+## 8. Limpeza geodésica pela faixa de domínio
+
+Parte dos sinistros aparecia no mapa longe do leito da rodovia, alguns a quilômetros
+do eixo. São erros de coordenada: o acidente é real e foi ancorado pelo quilômetro,
+mas a latitude e a longitude do boletim estão corrompidas.
+
+A distância de cada sinistro ao eixo da sua BR foi medida contra a geometria oficial
+do SNV em resolução cheia, e não contra a versão simplificada do banco, que se afasta
+do eixo em até 90 metros e inverteria o teste. A projeção para metros usa uma
+aproximação equiretangular, com a longitude corrigida pelo cosseno da latitude do
+estado. A medição cobriu os 10.008 sinistros ancorados, sem nenhum sem geometria da
+BR.
+
+A distribuição mostra um registro preciso no leito: metade dos sinistros fica a menos
+de 0,1 metro do eixo, e 95% a até 41 metros. Fora de uma faixa de 50 metros para cada
+lado ficam 418 sinistros, ou 4,2%, e a cauda chega a 214 quilômetros do eixo, um valor
+que só se explica por coordenada corrompida.
+
+O mapa passou a desenhar apenas os sinistros dentro da faixa. A marca de qualidade foi
+gravada na tabela `qualidade_geo`, com a distância em metros e o indicador de dentro
+da faixa. A limpeza é da visualização, e não do cálculo: o custo total do estado
+permanece em R$ 1.915.035.912, idêntico antes e depois da marcação, porque o acidente
+fora da faixa continua no custo e na contagem do segmento, ancorado pelo quilômetro. O
+segmento 304BRN0190, por exemplo, mantém as 61 ocorrências no custo, e mostra 60 no
+mapa, com um ponto omitido por coordenada deslocada. Os sinistros sem medição, como os
+não ancorados, permanecem no mapa, para que a limpeza esconda apenas o que foi medido
+como fora.
+
+## 9. Cobertura de testes
 
 A camada de consulta e a de aplicação têm 131 testes automatizados, executados a cada
 mudança. Cobrem a agregação por segmento sem multiplicar o custo por safra, as duas
@@ -149,7 +177,7 @@ preferência pela geometria oficial com recuo para a aproximação. As três con
 numéricas deste documento foram executadas contra o banco real, e não sobre dados de
 teste.
 
-## 9. Registro das correções da sessão
+## 10. Registro das correções da sessão
 
 A sessão acumulou correções que valem registro, no mesmo espírito das anteriores.
 
@@ -165,6 +193,15 @@ Os valores de referência do IPEA para as classes com feridos e com fatal foram
 corrigidos, como registra a seção 4.
 
 A geometria por sinistros foi substituída pela oficial, como registra a seção 7.
+
+A camada de pontos do mapa herdava o limite de 100 da paginação da tabela, e um
+segmento com 61 ocorrências mostrava apenas as que caíam nos 100 primeiros pontos do
+estado. A camada passou a usar uma consulta própria, sem esse teto, com um limite de
+segurança de vinte mil pontos.
+
+A primeira medição da faixa de domínio usou a geometria simplificada do banco, e o
+limiar de 50 metros ficava abaixo do erro de simplificação, de até 90 metros. A
+medição passou para a geometria cheia do shapefile, como registra a seção 8.
 
 Cada correção seguiu a mesma regra: o número foi conferido contra o banco, ou contra a
 fonte primária, antes de ser aceito.
