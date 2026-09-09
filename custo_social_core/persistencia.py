@@ -89,6 +89,13 @@ internacoes_sih = Table(
     Column("mes", Integer, primary_key=True),
     Column("internacoes", Integer),
 )
+geometria_segmento = Table(
+    "geometria_segmento", metadata,
+    Column("safra", String, primary_key=True),
+    Column("codigo", String, primary_key=True),
+    Column("br", Integer), Column("uf", String),
+    Column("pontos", String),   # JSON: lista de [lat, lng] simplificada
+)
 proveniencia_t = Table(
     "proveniencia", metadata,
     Column("tabela", String, primary_key=True),

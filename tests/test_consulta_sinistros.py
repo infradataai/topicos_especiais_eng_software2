@@ -228,3 +228,123 @@ def test_mapa_continua_recusando_sql_do_cliente(banco):
     app = criar_aplicacao(banco)
     status, _, _ = chamar(app, "/api/segmentos", "uf=RN&sql=SELECT+1")
     assert status.startswith("400")
+
+
+# --- geometria oficial do SNV --------------------------------------------
+
+def _grava_geometria_oficial(con):
+    """Insere um tracado oficial para o 101ABC, diferente da aproximacao."""
+    con.execute("CREATE TABLE geometria_segmento (safra TEXT, codigo TEXT,"
+                " br INTEGER, uf TEXT, pontos TEXT, PRIMARY KEY (safra, codigo))")
+    import json as _json
+    oficial = [[-5.70, -35.20], [-5.71, -35.21], [-5.72, -35.22]]
+    con.execute("INSERT INTO geometria_segmento VALUES (?,?,?,?,?)",
+                ("202507A", "101ABC", 101, "RN", _json.dumps(oficial)))
+    con.commit()
+    return oficial
+
+
+def test_prefere_geometria_oficial(banco):
+    from custo_social_core import consultas
+    oficial = _grava_geometria_oficial(banco)
+    itens = {i["codigo"]: i for i in consultas.geometria_segmentos(banco, "RN")}
+    assert itens["101ABC"]["pontos"] == oficial
+    assert itens["101ABC"]["fonte_geometria"] == "SNV/DNIT"
+
+
+def test_recua_para_aproximacao_sem_geometria(banco):
+    from custo_social_core import consultas
+    _grava_geometria_oficial(banco)  # so o 101ABC tem oficial
+    itens = {i["codigo"]: i for i in consultas.geometria_segmentos(banco, "RN")}
+    # o 304XYZ nao esta na tabela oficial: recua para a aproximacao
+    assert itens["304XYZ"]["fonte_geometria"] == "aproximacao"
+
+
+def test_geometria_sem_a_tabela_nao_falha(banco):
+    """Antes de ingerir, tudo recua para a aproximacao, sem erro."""
+    from custo_social_core import consultas
+    itens = consultas.geometria_segmentos(banco, "RN")
+    assert all(i["fonte_geometria"] == "aproximacao" for i in itens)
+
+
+def test_ingere_geometria_de_shapefile(tmp_path):
+    import shapefile
+    from scripts.ingerir_geometria_snv import ingerir_geometria
+    caminho = tmp_path / "snv.shp"
+    w = shapefile.Writer(str(caminho), shapeType=shapefile.POLYLINE)
+    w.field("vl_br", "C"); w.field("sg_uf", "C"); w.field("vl_codigo", "C")
+    # um trecho no RN e um na PB: so o do RN deve entrar
+    w.line([[(-35.2, -5.7), (-35.3, -5.8), (-35.4, -5.9)]]); w.record("101", "RN", "101BRN9999")
+    w.line([[(-35.0, -7.0), (-35.1, -7.1)]]);                w.record("101", "PB", "101BPB0001")
+    w.close()
+
+    con = sqlite3.connect(":memory:")
+    n = ingerir_geometria(caminho, "RN", "202507A", con, tolerancia=0.0)
+    assert n == 1
+    linha = con.execute("SELECT codigo, uf, pontos FROM geometria_segmento").fetchone()
+    assert linha[0] == "101BRN9999" and linha[1] == "RN"
+    import json as _json
+    pts = _json.loads(linha[2])
+    assert pts[0] == [-5.7, -35.2]   # convertido para [lat, lng]
+
+
+def test_simplifica_e_preserva_extremos():
+    from scripts.ingerir_geometria_snv import simplificar
+    # pontos quase colineares: a simplificacao remove os do meio
+    pontos = [(-35.0, -5.0), (-35.1, -5.1), (-35.2, -5.2), (-35.3, -5.3)]
+    reduzido = simplificar(pontos, 0.01)
+    assert reduzido[0] == [-5.0, -35.0]
+    assert reduzido[-1] == [-5.3, -35.3]
+    assert len(reduzido) <= len(pontos)
+
+
+# --- colunas anuais e aproximacao por sinistros --------------------------
+
+def test_colunas_anuais_dividem_pelo_periodo(banco):
+    """O banco de teste tem ocorrencias de 2021 a 2023: tres anos."""
+    from custo_social_core import consultas
+    assert consultas.periodo_anos(banco, "RN") == 3
+    linhas = consultas.segmentos_criticos(banco, "RN")
+    m = {l["codigo"]: l for l in linhas}
+    seg = m["101ABC"]
+    assert seg["custo_por_km_ano"] == pytest.approx(seg["custo_por_km"] / 3)
+    assert seg["custo_por_veiculo_km_ano"] == pytest.approx(seg["custo_por_veiculo_km"] / 3)
+    vazio = m["304XYZ"]
+    assert vazio["custo_por_veiculo_km"] is None
+    assert vazio["custo_por_veiculo_km_ano"] is None
+    assert vazio["custo_por_km_ano"] == pytest.approx(vazio["custo_por_km"] / 3)
+
+
+def test_ordena_por_coluna_anual(banco):
+    from custo_social_core import consultas
+    linhas = consultas.segmentos_criticos(banco, "RN", ordenar_por="custo_por_km_ano")
+    assert linhas[0]["codigo"] == "101ABC"
+
+
+def test_geometria_por_sinistros_liga_os_pontos(banco):
+    """Sem geometria oficial, o tracado vem dos sinistros ligados por km."""
+    from custo_social_core import consultas
+    itens = {i["codigo"]: i for i in consultas.geometria_segmentos(banco, "RN")}
+    assert len(itens["101ABC"]["pontos"]) == 2
+    for campo in ("br", "extensao", "ocorrencias", "custo_social", "vmda",
+                  "custo_por_km", "custo_por_km_ano", "custo_por_veiculo_km",
+                  "custo_por_veiculo_km_ano"):
+        assert campo in itens["101ABC"]
+
+
+def test_amostragem_preserva_extremos():
+    from custo_social_core import consultas
+    pts = [[i, i] for i in range(100)]
+    reduzido = consultas._amostrar(pts, 10)
+    assert len(reduzido) <= 10
+    assert reduzido[0] == [0, 0]
+    assert reduzido[-1] == [99, 99]
+
+
+def test_rota_geo_responde(banco):
+    import json
+    app = criar_aplicacao(banco)
+    status, _, corpo = chamar(app, "/api/segmentos_geo", "uf=RN")
+    assert status.startswith("200")
+    dados = json.loads(corpo)
+    assert any(i["codigo"] == "101ABC" for i in dados["items"])

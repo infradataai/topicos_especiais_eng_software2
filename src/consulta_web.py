@@ -111,6 +111,20 @@ def _resposta_mapa(start_response):
  thead th{background:#f2f2f2;position:sticky;top:0}
  .aviso{background:#fff4e5;border:1px solid #f0c390;padding:.5rem;border-radius:4px}
  .nulo{color:#999}
+ .legenda{background:rgba(255,255,255,.9);padding:.5rem .6rem;border-radius:4px;
+   box-shadow:0 1px 4px rgba(0,0,0,.3);font-size:.78rem;line-height:1.5;color:#222}
+ .legenda strong{display:block;margin-bottom:.3rem;font-size:.8rem}
+ .legenda span.ponto{display:inline-block;width:.8rem;height:.8rem;border-radius:50%;
+   margin-right:.35rem;border:1px solid #333;vertical-align:-1px}
+ .legenda div{display:flex;align-items:center}
+ .tooltip-seg{background:rgba(255,255,255,.97);border:1px solid #999;border-radius:5px;
+   box-shadow:0 2px 8px rgba(0,0,0,.35);padding:0;font-size:.78rem}
+ .tooltip-seg .leaflet-tooltip-tip{display:none}
+ .tipseg{padding:.45rem .6rem;min-width:190px}
+ .tipseg strong{display:block;font-size:.85rem;margin-bottom:.35rem;color:#b00020}
+ .tipseg div{display:flex;justify-content:space-between;gap:1.2rem;line-height:1.55}
+ .tipseg div span{color:#555}
+ .tipseg div b{color:#111;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -146,22 +160,71 @@ const moeda = (v) => v == null ? null : v.toLocaleString('pt-BR',{style:'currenc
 const COLUNAS = [
   ['codigo','segmento'],['br','BR'],['extensao','extensao (km)'],
   ['ocorrencias','ocorrencias'],['custo_social','custo social'],
-  ['vmda','VMDa'],['custo_por_km','R$/km'],['custo_por_veiculo_km','R$/veic-km']
+  ['vmda','VMDa'],
+  ['custo_por_km','R$/km'],['custo_por_km_ano','R$/km/ano'],
+  ['custo_por_veiculo_km','R$/veic-km'],['custo_por_veiculo_km_ano','R$/veic-km/ano']
 ];
 
-let mapa = null, camada = null;
+// as chaves sao as categorias gravadas em custo_ocorrencia. Declaradas antes do
+// bloco do mapa porque a legenda as usa na inicializacao.
+const CORES = {
+  sem_vitimas:      '#f2c200',   // amarelo
+  com_vitima_leve:  '#e8720c',   // laranja
+  com_vitima_grave: '#d00000',   // vermelho
+  com_obito:        '#000000',   // preto
+};
+const ROTULOS = {
+  sem_vitimas: 'sem vitimas', com_vitima_leve: 'com ferido leve',
+  com_vitima_grave: 'com ferido grave', com_obito: 'com obito',
+};
+const cor = (categoria) => CORES[categoria] || '#888';
+
+// campos e rotulos da caixa flutuante do trecho, na ordem da tabela
+const CAMPOS_SEG = [
+  ['br','BR'],['extensao','extensao (km)'],['ocorrencias','ocorrencias'],
+  ['custo_social','custo social'],['vmda','VMDa'],
+  ['custo_por_km','R$/km'],['custo_por_km_ano','R$/km/ano'],
+  ['custo_por_veiculo_km','R$/veic-km'],['custo_por_veiculo_km_ano','R$/veic-km/ano'],
+];
+const ESTILO_SEG      = {color:'#3b6ea5', weight:3, opacity:.55};
+const ESTILO_SEG_HOVER = {color:'#d00000', weight:7, opacity:1};
+
+function celulaSeg(c, v) {
+  if (v == null) return 'sem medicao';
+  if (['custo_social','custo_por_km','custo_por_km_ano'].includes(c)) return moeda(v);
+  if (['custo_por_veiculo_km','custo_por_veiculo_km_ano'].includes(c))
+    return v.toLocaleString('pt-BR',{maximumFractionDigits:4});
+  if (typeof v === 'number') return v.toLocaleString('pt-BR',{maximumFractionDigits:1});
+  return v;
+}
+function caixaSeg(s) {
+  return '<div class="tipseg"><strong>' + escapar(s.codigo) + '</strong>' +
+    CAMPOS_SEG.map(([c,r]) => '<div><span>' + escapar(r) + '</span>' +
+      '<b>' + escapar(celulaSeg(c, s[c])) + '</b></div>').join('') + '</div>';
+}
+
+let mapa = null, camada = null, camadaSeg = null;
 if (window.L) {
   mapa = L.map('mapa').setView([-5.8, -36.0], 7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     {maxZoom: 18, attribution: '&copy; OpenStreetMap'}).addTo(mapa);
+  camadaSeg = L.layerGroup().addTo(mapa);   // trechos por baixo dos pontos
   camada = L.layerGroup().addTo(mapa);
+
+  const legenda = L.control({position: 'bottomleft'});
+  legenda.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legenda');
+    div.innerHTML = '<strong>Classificacao do sinistro</strong>' +
+      ['sem_vitimas', 'com_vitima_leve', 'com_vitima_grave', 'com_obito']
+        .map((c) => '<div><span class="ponto" style="background:' + CORES[c] +
+                    '"></span>' + ROTULOS[c] + '</div>').join('');
+    return div;
+  };
+  legenda.addTo(mapa);
 } else {
   $('#alerta').innerHTML = '<p class="aviso">A biblioteca do mapa nao carregou. ' +
     'A tabela de segmentos continua disponivel.</p>';
 }
-
-const cor = (categoria) => ({obito:'#b00020', ferido_grave:'#e07800',
-  ferido_leve:'#0a7d3f', sem_vitimas:'#4a6fa5'}[categoria] || '#666');
 
 async function consultar() {
   const uf = $('#uf').value.trim().toUpperCase();
@@ -184,8 +247,9 @@ async function consultar() {
     COLUNAS.map(([c]) => {
       let v = linha[c];
       if (v == null) return '<td class="nulo">sem medicao</td>';
-      if (c === 'custo_social' || c === 'custo_por_km') v = moeda(v);
-      else if (c === 'custo_por_veiculo_km') v = v.toLocaleString('pt-BR',{maximumFractionDigits:4});
+      if (['custo_social','custo_por_km','custo_por_km_ano'].includes(c)) v = moeda(v);
+      else if (c === 'custo_por_veiculo_km' || c === 'custo_por_veiculo_km_ano')
+        v = v.toLocaleString('pt-BR',{maximumFractionDigits:4});
       else if (typeof v === 'number') v = v.toLocaleString('pt-BR',{maximumFractionDigits:1});
       return '<td>' + escapar(v) + '</td>';
     }).join('') + '</tr>').join('');
@@ -203,12 +267,38 @@ async function consultar() {
     pontos.push([o.latitude, o.longitude]);
     L.circleMarker([o.latitude, o.longitude], {
       radius: 4 + Math.log10(Math.max(o.custo_social || 1, 1)),
-      color: cor(o.categoria), fillOpacity: .6, weight: 1
+      fillColor: cor(o.categoria), fillOpacity: .85,
+      color: '#333', weight: .8
     }).bindPopup('BR-' + escapar(o.br) + ' km ' + escapar(o.km) + '<br>' +
-      escapar(o.ano) + ' &middot; ' + escapar(o.categoria) + '<br>' +
+      escapar(o.ano) + ' &middot; ' + escapar(ROTULOS[o.categoria] || o.categoria) + '<br>' +
       escapar(moeda(o.custo_social))).addTo(camada);
   }
   if (pontos.length) mapa.fitBounds(pontos, {padding: [20, 20]});
+
+  await desenharTrechos(uf);
+}
+
+async function desenharTrechos(uf) {
+  if (!camadaSeg) return;
+  const resposta = await fetch('/api/segmentos_geo?uf=' + encodeURIComponent(uf));
+  if (!resposta.ok) return;
+  const dados = await resposta.json();
+  camadaSeg.clearLayers();
+  for (const s of dados.items || []) {
+    const pts = s.pontos || [];
+    if (pts.length < 2) continue;   // um ponto so nao forma linha; o sinistro ja aparece
+    // o tracado aproximado, por falta de geometria oficial, vai tracejado
+    const base = s.fonte_geometria === 'aproximacao'
+      ? Object.assign({}, ESTILO_SEG, {dashArray: '4 6'}) : ESTILO_SEG;
+    const linha = L.polyline(pts, base);
+    linha.__base = base;
+    // caixa flutuante que segue o cursor, um pouco acima dele
+    linha.bindTooltip(caixaSeg(s), {sticky: true, direction: 'top',
+      offset: L.point(0, -8), opacity: 1, className: 'tooltip-seg'});
+    linha.on('mouseover', function () { this.setStyle(ESTILO_SEG_HOVER); this.bringToFront(); });
+    linha.on('mouseout',  function () { this.setStyle(this.__base); });
+    linha.addTo(camadaSeg);
+  }
 }
 
 $('#consultar').addEventListener('click', consultar);
@@ -218,7 +308,11 @@ consultar();
 </html>""".encode("utf-8")
     start_response(
         "200 OK",
-        [("Content-Type", "text/html; charset=utf-8"), ("Content-Length", str(len(corpo)))],
+        [("Content-Type", "text/html; charset=utf-8"),
+         ("Content-Length", str(len(corpo))),
+         # sem cache: a pagina muda durante o desenvolvimento e o navegador
+         # nao deve servir uma versao antiga
+         ("Cache-Control", "no-store, must-revalidate")],
     )
     return [corpo]
 
@@ -330,7 +424,8 @@ def criar_aplicacao(con: sqlite3.Connection):
             return _resposta_json(start_response, "200 OK", item[0])
 
         # --- esquema de sinistros (nucleo do projeto final) -------------------
-        if caminho in {"/api/segmentos", "/api/ocorrencias", "/api/resumo"}:
+        if caminho in {"/api/segmentos", "/api/ocorrencias", "/api/resumo",
+                       "/api/segmentos_geo"}:
             if not consultas.tem_esquema_de_sinistros(con):
                 return _resposta_json(
                     start_response, "400 Bad Request",
@@ -351,6 +446,11 @@ def criar_aplicacao(con: sqlite3.Connection):
 
             if caminho == "/api/resumo":
                 return _resposta_json(start_response, "200 OK", consultas.resumo(con, uf))
+
+            if caminho == "/api/segmentos_geo":
+                return _resposta_json(
+                    start_response, "200 OK",
+                    {"items": consultas.geometria_segmentos(con, uf)})
 
             try:
                 if caminho == "/api/segmentos":
