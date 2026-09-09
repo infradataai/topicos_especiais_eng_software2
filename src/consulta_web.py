@@ -144,6 +144,7 @@ veiculo-quilometro pesa o trecho vazio.</p>
   </select>
  </label>
  <label>BR (opcional) <input id="br" size="5"></label>
+ <label>Km (opcional) <input id="km" size="7"></label>
  <button id="consultar">Consultar</button>
 </div>
 
@@ -181,7 +182,8 @@ const cor = (categoria) => CORES[categoria] || '#888';
 
 // campos e rotulos da caixa flutuante do trecho, na ordem da tabela
 const CAMPOS_SEG = [
-  ['br','BR'],['extensao','extensao (km)'],['ocorrencias','ocorrencias'],
+  ['br','BR'],['km_inicial','km inicial'],['km_final','km final'],
+  ['extensao','extensao (km)'],['ocorrencias','ocorrencias'],
   ['custo_social','custo social'],['vmda','VMDa'],
   ['custo_por_km','R$/km'],['custo_por_km_ano','R$/km/ano'],
   ['custo_por_veiculo_km','R$/veic-km'],['custo_por_veiculo_km_ano','R$/veic-km/ano'],
@@ -229,6 +231,7 @@ if (window.L) {
 async function consultar() {
   const uf = $('#uf').value.trim().toUpperCase();
   const br = $('#br').value.trim();
+  const km = $('#km').value.trim();
   const ordem = $('#ordem').value;
   if (!uf) { $('#mensagem').textContent = 'Informe a unidade da federacao.'; return; }
 
@@ -255,9 +258,9 @@ async function consultar() {
     }).join('') + '</tr>').join('');
 
   if (!camada) return;
-  const q = new URLSearchParams({uf, page_size: '100'});
+  const q = new URLSearchParams({uf});
   if (br) q.set('br', br);
-  const rOcor = await fetch('/api/ocorrencias?' + q);
+  const rOcor = await fetch('/api/ocorrencias_geo?' + q);
   const ocor = await rOcor.json();
   if (!rOcor.ok) return;
   camada.clearLayers();
@@ -273,15 +276,16 @@ async function consultar() {
       escapar(o.ano) + ' &middot; ' + escapar(ROTULOS[o.categoria] || o.categoria) + '<br>' +
       escapar(moeda(o.custo_social))).addTo(camada);
   }
-  if (pontos.length) mapa.fitBounds(pontos, {padding: [20, 20]});
+  if (pontos.length && !km) mapa.fitBounds(pontos, {padding: [20, 20]});
 
-  await desenharTrechos(uf);
+  const itens = await desenharTrechos(uf);
+  if (km) centralizarKm(itens, br, parseFloat(km.replace(',', '.')));
 }
 
 async function desenharTrechos(uf) {
-  if (!camadaSeg) return;
+  if (!camadaSeg) return [];
   const resposta = await fetch('/api/segmentos_geo?uf=' + encodeURIComponent(uf));
-  if (!resposta.ok) return;
+  if (!resposta.ok) return [];
   const dados = await resposta.json();
   camadaSeg.clearLayers();
   for (const s of dados.items || []) {
@@ -299,6 +303,54 @@ async function desenharTrechos(uf) {
     linha.on('mouseout',  function () { this.setStyle(this.__base); });
     linha.addTo(camadaSeg);
   }
+  return dados.items || [];
+}
+
+// ponto ao longo da polilinha, na fracao f (0 a 1) do comprimento reto acumulado
+function pontoAoLongo(pts, f) {
+  let total = 0;
+  const dist = [];
+  for (let i = 1; i < pts.length; i++) {
+    const d = Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]);
+    dist.push(d); total += d;
+  }
+  if (total === 0) return pts[0];
+  let alvo = f * total, acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    if (acc + dist[i-1] >= alvo) {
+      const t = dist[i-1] ? (alvo - acc) / dist[i-1] : 0;
+      return [pts[i-1][0] + t * (pts[i][0] - pts[i-1][0]),
+              pts[i-1][1] + t * (pts[i][1] - pts[i-1][1])];
+    }
+    acc += dist[i-1];
+  }
+  return pts[pts.length - 1];
+}
+
+let marcadorKm = null;
+function centralizarKm(itens, br, km) {
+  if (!mapa || isNaN(km)) return;
+  const cand = (itens || []).filter((s) =>
+    (!br || String(s.br) === String(br)) &&
+    s.km_inicial != null && s.km_final != null &&
+    km >= s.km_inicial && km <= s.km_final && (s.pontos || []).length >= 2);
+  if (!cand.length) {
+    $('#mensagem').textContent = 'Nao ha trecho com esse km' + (br ? ' na BR-' + br : '') + '.';
+    return;
+  }
+  // menor trecho que contem o km, para o caso de coincidencia
+  cand.sort((a, b) => a.extensao - b.extensao);
+  const s = cand[0];
+  const f = (s.km_final > s.km_inicial)
+    ? (km - s.km_inicial) / (s.km_final - s.km_inicial) : 0;
+  const ponto = pontoAoLongo(s.pontos, Math.max(0, Math.min(1, f)));
+  if (marcadorKm) mapa.removeLayer(marcadorKm);
+  // circleMarker em vez do icone padrao, que depende de imagem externa
+  marcadorKm = L.circleMarker(ponto, {radius: 9, color: '#0033aa', weight: 3,
+      fillColor: '#3b82f6', fillOpacity: .9}).addTo(mapa)
+    .bindPopup('BR-' + escapar(s.br) + ' km ' + escapar(km) + '<br>' +
+      escapar(s.codigo)).openPopup();
+  mapa.setView(ponto, 14);
 }
 
 $('#consultar').addEventListener('click', consultar);
@@ -425,7 +477,7 @@ def criar_aplicacao(con: sqlite3.Connection):
 
         # --- esquema de sinistros (nucleo do projeto final) -------------------
         if caminho in {"/api/segmentos", "/api/ocorrencias", "/api/resumo",
-                       "/api/segmentos_geo"}:
+                       "/api/segmentos_geo", "/api/ocorrencias_geo"}:
             if not consultas.tem_esquema_de_sinistros(con):
                 return _resposta_json(
                     start_response, "400 Bad Request",
@@ -451,6 +503,12 @@ def criar_aplicacao(con: sqlite3.Connection):
                 return _resposta_json(
                     start_response, "200 OK",
                     {"items": consultas.geometria_segmentos(con, uf)})
+
+            if caminho == "/api/ocorrencias_geo":
+                itens = consultas.ocorrencias_geo(con, uf, br=br, ano=ano)
+                return _resposta_json(
+                    start_response, "200 OK",
+                    {"items": itens, "total": len(itens)})
 
             try:
                 if caminho == "/api/segmentos":

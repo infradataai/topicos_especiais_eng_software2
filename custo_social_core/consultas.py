@@ -65,7 +65,8 @@ exp AS (
      WHERE e.ano = (SELECT MAX(ano) FROM exposicao_segmento WHERE codigo = e.codigo)
 ),
 base AS (
-    SELECT s.codigo, s.br, s.uf, s.extensao, s.regime, s.jurisdicao,
+    SELECT s.codigo, s.br, s.uf, s.km_inicial, s.km_final, s.extensao,
+           s.regime, s.jurisdicao,
            SUM(c.total)    AS custo_social,
            COUNT(*)        AS ocorrencias,
            MAX(e.vmda)     AS vmda,
@@ -80,7 +81,8 @@ base AS (
       JOIN recente          r ON r.codigo = anc.codigo
       JOIN segmentos_snv    s ON s.codigo = r.codigo AND s.safra = r.safra
     LEFT JOIN exp           e ON e.codigo = s.codigo
-     GROUP BY s.codigo, s.br, s.uf, s.extensao, s.regime, s.jurisdicao
+     GROUP BY s.codigo, s.br, s.uf, s.km_inicial, s.km_final, s.extensao,
+              s.regime, s.jurisdicao
 )
 -- as colunas anuais dividem o acumulado pelo periodo observado (:n_anos),
 -- que e o intervalo de anos com ocorrencia na unidade da federacao
@@ -179,6 +181,34 @@ def contar_ocorrencias(con: sqlite3.Connection, uf: str, *, br: int | None = Non
     """Quantas ocorrencias atendem ao filtro, para a paginacao."""
     where, valores = _filtros_ocorrencia(uf, br, ano)
     return con.execute(f"SELECT COUNT(*) FROM ocorrencias o WHERE {where}", valores).fetchone()[0]
+
+
+# Teto de seguranca para os pontos do mapa. Acima disso, a resposta e cortada e
+# declara o corte, para o navegador nao travar com o pais inteiro.
+LIMITE_PONTOS_MAPA = 20_000
+
+
+def ocorrencias_geo(con: sqlite3.Connection, uf: str, *, br: int | None = None,
+                    ano: int | None = None, limite: int = LIMITE_PONTOS_MAPA) -> list[dict]:
+    """Todos os pontos de sinistro com coordenada, para a camada do mapa.
+
+    Sem paginacao: a camada do mapa precisa de todos os pontos, e nao de uma
+    pagina. So os campos que o marcador usa entram, para o pacote ficar leve.
+    O teto evita travar o navegador quando o filtro e amplo.
+    """
+    where, valores = _filtros_ocorrencia(uf, br, ano)
+    valores["limite"] = limite
+    cursor = con.execute(
+        "SELECT o.br, o.km, o.ano, o.latitude, o.longitude, "
+        "       c.total AS custo_social, c.categoria, a.codigo_segmento AS segmento "
+        "  FROM ocorrencias o "
+        "  LEFT JOIN custo_ocorrencia c ON c.id = o.id "
+        "  LEFT JOIN ancoragem       a ON a.id = o.id "
+        f" WHERE {where} AND o.latitude IS NOT NULL AND o.longitude IS NOT NULL "
+        " LIMIT :limite",
+        valores,
+    )
+    return _dicionarios(cursor)
 
 
 def _amostrar(pontos: list, maximo: int) -> list:

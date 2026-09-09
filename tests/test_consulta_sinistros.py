@@ -348,3 +348,21 @@ def test_rota_geo_responde(banco):
     assert status.startswith("200")
     dados = json.loads(corpo)
     assert any(i["codigo"] == "101ABC" for i in dados["items"])
+
+
+def test_ocorrencias_geo_traz_todos_sem_teto_de_pagina(banco):
+    """A camada do mapa nao pode herdar o limite de 100 da tabela."""
+    from custo_social_core import consultas
+    itens = consultas.ocorrencias_geo(banco, "RN")
+    assert len(itens) == 3  # as tres do banco de teste, todas com coordenada
+    assert all("segmento" in i for i in itens)
+
+
+def test_rota_ocorrencias_geo_responde(banco):
+    import json
+    app = criar_aplicacao(banco)
+    status, _, corpo = chamar(app, "/api/ocorrencias_geo", "uf=RN&br=101")
+    assert status.startswith("200")
+    dados = json.loads(corpo)
+    assert dados["total"] == len([i for i in dados["items"]])
+    assert all(str(i["br"]) == "101" for i in dados["items"])
