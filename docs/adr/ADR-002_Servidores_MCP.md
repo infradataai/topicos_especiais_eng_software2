@@ -32,6 +32,10 @@ natural. O `fs-lai` dá acesso de leitura à pasta `LAI`. Os caminhos sensíveis
 variáveis de ambiente, sem gravar valores no arquivo versionado. Ambos os servidores
 exigem aprovação na primeira sessão por virem do `.mcp.json`.
 
+Esta decisão trata exclusivamente das ferramentas MCP usadas pelo agente. A consulta
+web prevista para usuários finais é uma aplicação do sistema, não um novo servidor
+MCP, e deve obedecer ao ADR-007, com endpoints parametrizados e somente leitura.
+
 # 3. Justificativas
 
 A conexão da camada ouro em leitura habilita consulta em linguagem natural sem risco de

@@ -1,0 +1,22 @@
+# Dependencias do nucleo. Versoes minimas testadas em 07/09/2026.
+#
+#   python -m pip install -r requirements.txt
+#
+# Observacao sobre os leitores de planilha: sao dois, e ambos sao necessarios.
+# O openpyxl le .xlsx e o xlrd le .xls. As safras do SNV alternam entre os dois
+# formatos (202308A e 202401A sao .xlsx; as demais sao .xls), entao remover
+# qualquer um deles quebra a leitura de parte da serie.
+
+pandas>=2.2
+SQLAlchemy>=2.0
+openpyxl>=3.1      # leitura de .xlsx (SNV recente, planilhas de custo)
+xlrd>=2.0          # leitura de .xls  (maioria das safras do SNV)
+pyarrow>=15.0      # camada intermediaria em Parquet
+
+# Ingestao da geometria do SNV (scripts/ingerir_geometria_snv.py).
+# So a ingestao usa; a aplicacao le a geometria ja gravada no banco.
+pyshp>=2.3         # leitura do shapefile do SNV
+shapely>=2.0       # simplificacao das polilinhas
+
+# Desenvolvimento
+pytest>=8.0
