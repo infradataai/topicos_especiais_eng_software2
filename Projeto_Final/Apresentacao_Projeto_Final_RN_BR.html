@@ -416,6 +416,27 @@
         <div class="affil reveal">PPgTI &middot; Instituto Metrópole Digital &middot; UFRN &nbsp;|&nbsp; Prof. Dr. Jean Mário Moreira de Lima &nbsp;|&nbsp; 12/09/2026</div>
     </header>
 
+    <!-- SUMÁRIO -->
+    <section class="stage">
+        <div class="glass-card pad w-lg mx reveal">
+            <div class="card-head"><span class="icon-box"><i data-icon="list"></i></span><span class="rule"></span><h3>Sumário</h3></div>
+            <div class="cols-2">
+                <ul class="list">
+                    <li class="bul"><span class="bullet"><i data-icon="alert"></i></span><p class="txt"><b>1.</b> O problema e o resultado</p></li>
+                    <li class="bul"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>2.</b> Requisitos funcionais</p></li>
+                    <li class="bul"><span class="bullet"><i data-icon="git-branch"></i></span><p class="txt"><b>3.</b> Arquitetura e decisões (ADRs)</p></li>
+                    <li class="bul"><span class="bullet"><i data-icon="scale"></i></span><p class="txt"><b>4.</b> Como o custo é calculado</p></li>
+                </ul>
+                <ul class="list">
+                    <li class="bul"><span class="bullet"><i data-icon="route"></i></span><p class="txt"><b>5.</b> Especificação (SDD) e critérios de aceite</p></li>
+                    <li class="bul"><span class="bullet"><i data-icon="gauge"></i></span><p class="txt"><b>6.</b> Harness e controle de agentes</p></li>
+                    <li class="bul"><span class="bullet"><i data-icon="cpu"></i></span><p class="txt"><b>7.</b> Modelos e ferramentas de IA</p></li>
+                    <li class="bul"><span class="bullet"><i data-icon="map-pin"></i></span><p class="txt"><b>8.</b> Demo ao vivo, escala nacional e aprendizados</p></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
     <!-- 1. CONTEXTO E MOTIVAÇÃO -->
     <section class="stage">
         <div class="glass-card pad w-md mx reveal">
@@ -505,24 +526,24 @@
     <!-- O SISTEMA: 10 RF -->
     <section class="stage">
         <div class="glass-card pad w-lg mx reveal">
-            <div class="card-head"><span class="icon-box"><i data-icon="database"></i></span><span class="rule"></span><h3>O sistema: um pipeline de dados de ponta a ponta</h3></div>
+            <div class="card-head"><span class="icon-box"><i data-icon="database"></i></span><span class="rule"></span><h3>O sistema: um pipeline de dados de ponta a ponta (Requisitos Funcionais)</h3></div>
             <div class="cols-2">
                 <ul class="list">
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>1.</b> Ingestão de CSV/XLSX heterogêneos de vários órgãos (PRF, SNV/DNIT, IPEA).</p></li>
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>2.</b> Normalização e deduplicação das ocorrências.</p></li>
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>3.</b> Validação de tipos e detecção de inconsistências.</p></li>
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>4.</b> Consolidação em banco único (SQLite, camadas bronze/silver/gold).</p></li>
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>5.</b> Cálculo do custo social por ocorrência (produto C&nbsp;&middot;&nbsp;M do IPEA), em 4 categorias.</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF1</b> Ingestão de CSV/XLSX heterogêneos de vários órgãos (PRF, SNV/DNIT, IPEA).</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF2</b> Normalização e deduplicação das ocorrências.</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF3</b> Validação de tipos e detecção de inconsistências.</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF4</b> Consolidação em banco único (SQLite, camadas bronze/silver/gold).</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF5</b> Cálculo do custo social por ocorrência (produto C&nbsp;&middot;&nbsp;M do IPEA), em 4 categorias.</p></li>
                 </ul>
                 <ul class="list">
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>6.</b> Ancoragem geográfica no SNV com a geometria oficial dos trechos.</p></li>
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>7.</b> Partição do custo por regime — ANTT &times; DNIT — mês a mês.</p></li>
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>8.</b> Estatística descritiva e detecção de outliers por trecho.</p></li>
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>9.</b> Versionamento e rastreamento da origem de cada dado (safra do SNV).</p></li>
-                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>10.</b> Consulta web com mapa e relatórios em Excel, JSON e PDF.</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF6</b> Ancoragem geográfica no SNV com a geometria oficial dos trechos.</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF7</b> Partição do custo por regime — ANTT &times; DNIT — mês a mês.</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF8</b> Estatística descritiva e detecção de outliers por trecho.</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF9</b> Versionamento e rastreamento da origem de cada dado (safra do SNV).</p></li>
+                    <li class="bul frag"><span class="bullet"><i data-icon="check"></i></span><p class="txt"><b>RF10</b> Consulta web com mapa e relatórios em Excel, JSON e PDF.</p></li>
                 </ul>
             </div>
-            <p class="tbl-note">Dez requisitos funcionais demonstráveis. O piloto roda sobre o RN; o mesmo núcleo escala para o país.</p>
+            <p class="tbl-note">Requisitos Funcionais (RF1 a RF10) — demonstráveis, cada um com módulo e teste próprios. O piloto roda sobre o RN; o mesmo núcleo escala para o país.</p>
         </div>
     </section>
 
@@ -639,6 +660,23 @@
                 <div class="tier featured frag"><span class="tier-badge">na prática</span><span class="ico"><i data-icon="alert"></i></span><h4>Dificuldades reais</h4><div class="num" style="font-size:1.6rem">os dados</div><ul><li><i data-icon="check"></i>Um arquivo da PRF trocava ponto por vírgula no decimal.</li><li><i data-icon="check"></i>Ancorar a ocorrência no SNV exigiu geometria oficial e limpeza da faixa de domínio.</li><li><i data-icon="check"></i>Casar o regime ANTT/DNIT mês a mês: 3 tentativas até bater com a V07.</li></ul></div>
                 <div class="tier frag"><span class="ico"><i data-icon="route"></i></span><h4>Faria diferente</h4><div class="num" style="font-size:1.6rem;color:var(--accent)">os contratos</div><ul><li><i data-icon="check"></i>Definir os contratos entre camadas antes de codar.</li><li><i data-icon="check"></i>Automatizar a conferência (fitness function) do total por UF.</li></ul></div>
             </div>
+        </div>
+    </section>
+
+    <!-- ENTREGÁVEIS -->
+    <section class="stage">
+        <div class="glass-card pad w-md mx reveal">
+            <div class="card-head"><span class="icon-box"><i data-icon="file"></i></span><span class="rule"></span><h3>Entregáveis</h3></div>
+            <ul class="list">
+                <li class="bul frag"><span class="bullet"><i data-icon="git-branch"></i></span><p class="txt">Código no repositório público, com histórico real de commits.</p></li>
+                <li class="bul frag"><span class="bullet"><i data-icon="book"></i></span><p class="txt">Esta apresentação e o documento de modelos e ferramentas de IA.</p></li>
+                <li class="bul frag"><span class="bullet"><i data-icon="link"></i></span><p class="txt">Post no LinkedIn pelo método STAR.</p></li>
+            </ul>
+            <div class="frag" style="display:flex;flex-wrap:wrap;gap:.8rem;justify-content:center;margin-top:1.8rem">
+                <a href="https://github.com/infradataai/topicos_especiais_eng_software2" style="padding:.8rem 1.5rem;border-radius:12px;font-weight:700;text-decoration:none;background:var(--accent);color:var(--bg-0);font-size:clamp(.95rem,1.2vw,1.12rem)">Repositório no GitHub</a>
+                <a href="https://www.linkedin.com/feed/update/urn:li:share:7504327913333465088/" style="padding:.8rem 1.5rem;border-radius:12px;font-weight:700;text-decoration:none;border:1px solid var(--glass-bd);color:var(--ink);font-size:clamp(.95rem,1.2vw,1.12rem)">Post no LinkedIn (STAR)</a>
+            </div>
+            <p class="tbl-note frag">github.com/infradataai/topicos_especiais_eng_software2 &nbsp;·&nbsp; post publicado no LinkedIn (método STAR).</p>
         </div>
     </section>
 
