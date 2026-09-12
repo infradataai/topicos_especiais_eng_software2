@@ -10,23 +10,23 @@ Este documento reúne, em lista objetiva, os modelos de IA, as ferramentas e as 
 
 | Modelo | Papel no projeto | Evidência |
 |---|---|---|
-| Claude Opus (Anthropic) | Especificação, geração de código e revisão de diffs nas tarefas de maior complexidade. | `docs/prompts-comparacao.md` |
-| Claude Haiku (Anthropic) | Repetição controlada do mesmo par de prompts, para medir o efeito da capacidade do modelo sobre a qualidade da resposta. | `docs/prompts-comparacao.md` |
+| GPT 5.3-Luna (OpenAI) | Geração e revisão de código no editor; selecionado automaticamente pelo GitHub Copilot ou pelo Claude Code. | `.github/`, `.claude/` |
+| Opus 4.8 (Anthropic) | Idem; nas tarefas de maior complexidade. | `.github/`, `.claude/` |
+| Claude Sonnet (Anthropic) | Idem; uso corrente ao longo do projeto. | `.github/`, `.claude/` |
 
-A comparação entre os dois modelos registrou um achado metodológico: num problema pequeno e bem delimitado, um contexto de prompt bem escrito recupera boa parte da diferença de capacidade entre os modelos.
+A seleção do modelo foi automática, feita pelo Claude Code ou pelo GitHub Copilot, e recaiu quase sempre em um destes três. O comparativo da Etapa 4 (`docs/prompts-comparacao.md`) registrou um achado metodológico: num problema pequeno e bem delimitado, um contexto de prompt bem escrito recupera boa parte da diferença de capacidade entre modelos.
 
 ## Ferramentas
 
 | Categoria | Ferramenta | Uso | Evidência |
 |---|---|---|---|
-| IDE | VS Code | Edição e execução local. | ambiente da dupla |
+| IDE | VS Code + GitHub Copilot + Claude Code | Edição e sugestão de código no editor, com seleção automática de modelo. | `.github/`, `.claude/` |
 | Agente de linha de comando | Claude Code | Execução em ramo isolado, edição de arquivos, testes e checkpoints. | `.claude/` |
 | Harness — permissões | `.claude/settings.json` | Nega `git push --force`, `git reset --hard` e a leitura de `.env`; exige confirmação para `git push` e coletas pesadas; libera git de leitura, commit e `pytest`. | `.claude/settings.json` |
 | Harness — regra por escopo | `.claude/rules/notebooks.md` | Restringe os notebooks de ETL e EDA: leem a camada ouro e nunca escrevem no banco; a bronze é lida como texto imutável. | `.claude/rules/notebooks.md` |
 | Contexto de projeto | `CLAUDE.md` e `AGENTS.md` | Contexto persistente lido pelos agentes a cada sessão. | raiz do repositório |
 | Servidores MCP | `sqlite-ouro` e `fs-lai` | Acesso ao banco ouro e ao diretório da LAI, ambos em leitura. | `.mcp.json` |
-| Ferramenta de spec (SDD) | OpenSpec | Mudanças em pasta própria (`proposal`, `specs` em delta, `design`, `tasks`); coube melhor no trabalho incremental sobre código existente. | `openspec/changes/` |
-| Ferramenta de spec (SDD) | GitHub Spec-Kit | Constituição de projeto mais `spec`, `plan` e `tasks`; fixou princípios globais desde o início. | `.specify/memory/`, `specs/` |
+| Ferramenta de spec (SDD) | OpenSpec | Mudanças em pasta própria (`proposal`, `specs` em delta, `design`, `tasks`), no trabalho incremental sobre código existente. | `openspec/changes/` |
 | Testes | Pytest (TDD/BDD) | 106 testes na árvore consolidada (30 da camada de aplicação e 76 do núcleo). | `tests/`, ADR-013 |
 
 ## Estratégias de prompt
@@ -45,5 +45,3 @@ Duas estratégias complementares sustentaram o processo. Primeira: a especifica�
 O controle sobre os agentes se apoiou em três mecanismos verificáveis: o transcript de cada sessão, a revisão do diff antes do aceite e as permissões declaradas em `.claude/settings.json`, que bloqueiam de fato as operações destrutivas. Nada entra no `main` sem esse rastro.
 
 ---
-
-Nota de método: este documento segue a norma culta e a voz impessoal. A revisão final pela rotina de escrita científica humanizada (auditor e diff de integridade) fica pendente do retorno do ambiente de execução.

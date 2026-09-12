@@ -526,19 +526,6 @@
         </div>
     </section>
 
-    <!-- RESULTADO DO PILOTO RN -->
-    <section class="stage">
-        <div class="glass-card pad w-lg mx reveal">
-            <div class="card-head"><span class="icon-box"><i data-icon="map-pin"></i></span><span class="rule"></span><h3>Piloto no Rio Grande do Norte</h3></div>
-            <div class="cols-3">
-                <div class="stat frag"><div class="num">R$ 1,91 bi</div><div class="lbl">custo social no período de 2019 a 2025, a preços de jun/2026, recomposto por componente do modelo do IPEA. Âncora do IPEA por triangulação: <b>R$ 2,30 bi</b>.</div></div>
-                <div class="stat frag"><div class="num">1.666,5 km</div><div class="lbl">extensão crítica analisada, <b>99,8% ancorada</b> na geometria oficial do SNV.</div></div>
-                <div class="stat frag"><div class="num">4</div><div class="lbl">categorias de gravidade, separando ferido leve de ferido grave — o IPEA os agrega.</div></div>
-            </div>
-            <p class="tbl-note">Período 2019–2025, ocorrências federais da PRF, deduplicadas. R$ 2,30 bi é a âncora do IPEA usada para triangular; R$ 1,91 bi é o custo recomposto por componente.</p>
-        </div>
-    </section>
-
     <!-- COMO O CUSTO É CALCULADO -->
     <section class="stage">
         <div class="glass-card pad w-md mx reveal">
@@ -560,7 +547,7 @@
                 <div class="tl frag"><span class="dot">1</span><h4>Behavior (prompt inicial)</h4><p>O comportamento esperado da ingestão da PRF e do cálculo de custo é descrito em linguagem natural.</p></div>
                 <div class="tl frag"><span class="dot">2</span><h4>Requisitos e critérios de aceite</h4><p>Requisitos em EARS e critérios em Given/When/Then, com ao menos um caso de borda.</p></div>
                 <div class="tl frag"><span class="dot">3</span><h4>Plano de tarefas</h4><p>O escopo é quebrado em tarefas rastreáveis (tasks), ligadas ao spec delta.</p></div>
-                <div class="tl frag"><span class="dot">4</span><h4>Ferramentas de spec</h4><p>OpenSpec e GitHub Spec-Kit. A escolha decorre do formato estruturado e versionável, alinhado ao Git.</p></div>
+                <div class="tl frag"><span class="dot">4</span><h4>Ferramenta de spec</h4><p>OpenSpec. A escolha decorre do formato estruturado e versionável, alinhado ao Git.</p></div>
             </div>
         </div>
     </section>
@@ -605,10 +592,10 @@
         <div class="glass-card pad w-xl mx reveal">
             <div class="card-head"><span class="icon-box"><i data-icon="cpu"></i></span><span class="rule"></span><h3>Modelos, ferramentas e estratégias de IA</h3></div>
             <div class="cols-3">
-                <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">IDE</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">VS Code</div><div class="lbl" style="margin-top:.5rem">edição e execução local</div></div>
+                <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">IDE</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">VS Code + GitHub Copilot + Claude Code</div><div class="lbl" style="margin-top:.5rem">sugestão de código no editor; seleção automática de modelo</div></div>
                 <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">Agente (CLI)</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">Claude Code</div><div class="lbl" style="margin-top:.5rem">ramo isolado, edição, testes, checkpoints</div></div>
-                <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">Modelos</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">Claude (Opus e Sonnet)</div><div class="lbl" style="margin-top:.5rem">especificação, código e revisão de diffs</div></div>
-                <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">Spec (SDD)</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">OpenSpec + GitHub Spec-Kit</div><div class="lbl" style="margin-top:.5rem">requisitos, Given/When/Then, tasks</div></div>
+                <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">Modelos</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">GPT 5.3-Luna &middot; Opus 4.8 &middot; Claude Sonnet</div><div class="lbl" style="margin-top:.5rem">seleção automática do Claude Code ou do Copilot; quase sempre um destes três</div></div>
+                <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">Spec (SDD)</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">OpenSpec</div><div class="lbl" style="margin-top:.5rem">requisitos, Given/When/Then, tasks</div></div>
                 <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">Guardrails</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">hooks + .claude/rules</div><div class="lbl" style="margin-top:.5rem">permissão por escopo e gate de teste</div></div>
                 <div class="stat frag"><div style="font-family:var(--font-display);font-weight:700;font-size:1.25rem;color:var(--accent)">Testes</div><div style="margin-top:.35rem;font-weight:600;color:var(--ink-strong)">Pytest (TDD/BDD)</div><div class="lbl" style="margin-top:.5rem">106 testes no núcleo do custo</div></div>
             </div>
@@ -652,19 +639,6 @@
                 <div class="tier featured frag"><span class="tier-badge">na prática</span><span class="ico"><i data-icon="alert"></i></span><h4>Dificuldades reais</h4><div class="num" style="font-size:1.6rem">os dados</div><ul><li><i data-icon="check"></i>Um arquivo da PRF trocava ponto por vírgula no decimal.</li><li><i data-icon="check"></i>Ancorar a ocorrência no SNV exigiu geometria oficial e limpeza da faixa de domínio.</li><li><i data-icon="check"></i>Casar o regime ANTT/DNIT mês a mês: 3 tentativas até bater com a V07.</li></ul></div>
                 <div class="tier frag"><span class="ico"><i data-icon="route"></i></span><h4>Faria diferente</h4><div class="num" style="font-size:1.6rem;color:var(--accent)">os contratos</div><ul><li><i data-icon="check"></i>Definir os contratos entre camadas antes de codar.</li><li><i data-icon="check"></i>Automatizar a conferência (fitness function) do total por UF.</li></ul></div>
             </div>
-        </div>
-    </section>
-
-    <!-- ENTREGÁVEIS -->
-    <section class="stage">
-        <div class="glass-card pad w-md mx reveal">
-            <div class="card-head"><span class="icon-box"><i data-icon="file"></i></span><span class="rule"></span><h3>Entregáveis</h3></div>
-            <ul class="list">
-                <li class="bul frag"><span class="bullet"><i data-icon="git-branch"></i></span><p class="txt">Código no repositório, com histórico real de commits e acesso concedido ao professor.</p></li>
-                <li class="bul frag"><span class="bullet"><i data-icon="book"></i></span><p class="txt">Esta apresentação.</p></li>
-                <li class="bul frag"><span class="bullet"><i data-icon="cpu"></i></span><p class="txt">Documento de modelos, estratégias e ferramentas de IA.</p></li>
-                <li class="bul frag"><span class="bullet"><i data-icon="link"></i></span><p class="txt">Post no LinkedIn pelo método STAR, com o link no documento de entrega.</p></li>
-            </ul>
         </div>
     </section>
 
