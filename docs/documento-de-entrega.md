@@ -22,7 +22,7 @@ Sistema de medição do custo social dos sinistros nas rodovias federais: um pip
 | Repositório do projeto | https://github.com/infradataai/topicos_especiais_eng_software2 |
 | Post no LinkedIn (método STAR) | https://www.linkedin.com/feed/update/urn:li:share:7504327913333465088/ |
 
-Observação sobre o repositório: o trabalho final consolidado está na branch `feature/projeto-final-rn`. Antes da apresentação, essa branch deve ser integrada ao `main`, para que a raiz do repositório mostre o pipeline completo. O repositório é público; não é necessário conceder acesso.
+Observação sobre o repositório: o trabalho final já está integrado ao `main`. A raiz do repositório mostra o pipeline completo (código, apresentação e documentos). O repositório é público; não é necessário conceder acesso.
 
 ## Entregáveis (seção VI)
 
